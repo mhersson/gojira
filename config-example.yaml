@@ -1,0 +1,15 @@
+# Gojira looks for config file in either in 
+# $HOME/.config/gojira or same folder as the executable
+
+jiraurl: https://your.jira.com
+
+username: jirauser
+
+# Password type and password:
+# passwordtype = pass, password = path in passwordstore
+# passwordtype = gpg, password = base64 encoded ASCII armored gpg encrypted string
+# Create a gpg encrypted password string by running the following in a terminal:
+#    echo "yourpassword" | gpg -r yourgpgkey -e --armor | base64 --wrap 0
+# passwordtype = plain, password = plain text password (only for testing purposes)
+password: my-super-simple-plain-password
+passwordtype: plain
