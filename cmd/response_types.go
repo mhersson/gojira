@@ -200,7 +200,7 @@ type IssueType struct {
 	Name string `json:"name"`
 }
 
-type Priorities []struct {
+type Priority struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
@@ -214,4 +214,44 @@ type TimeSpentUserIssue struct {
 	Summary          string
 	TimeSpent        string
 	TimeSpentSeconds int
+}
+
+type RapidView struct {
+	ID                   int    `json:"id"`
+	Name                 string `json:"name"`
+	SprintSupportEnabled bool   `json:"sprintSupportEnabled"`
+}
+
+type Sprint struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	State string `json:"state"`
+}
+
+type SprintIssue struct {
+	ID                       int      `json:"id"`
+	Key                      string   `json:"key"`
+	TypeID                   string   `json:"typeId"`
+	Summary                  string   `json:"summary"`
+	PriorityID               string   `json:"priorityId"`
+	Assignee                 string   `json:"assignee"`
+	AssigneeName             string   `json:"assigneeName"`
+	CurrentEstimateStatistic TimeStat `json:"currentEstimateStatistic"`
+	TrackingStatistic        TimeStat `json:"trackingStatistic"`
+	Hidden                   bool     `json:"hidden"`
+	Done                     bool     `json:"done"`
+}
+
+type SprintContent struct {
+	CompletedIssues                   []SprintIssue `json:"completedIssues"`
+	IssuesNotCompletedInCurrentSprint []SprintIssue `json:"issuesNotCompletedInCurrentSprint"`
+	IssuesCompletedInAnotherSprint    []SprintIssue `json:"issuesCompletedInAnotherSprint"`
+}
+
+type TimeStat struct {
+	StatFieldID    string `json:"statFieldId"`
+	StatFieldValue struct {
+		Value float64 `json:"value"`
+		Text  string  `json:"text"`
+	} `json:"statFieldValue"`
 }

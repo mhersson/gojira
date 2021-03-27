@@ -106,6 +106,19 @@ Flags:
   -h, --help                   help for myworklog
 `
 
+const getSprintUsage string = `
+Get the current active sprint and all it's issues.
+
+Usage:
+  gojira get sprint [NAME OF BOARD]
+
+Aliases:
+  sprint
+
+Flags:
+  -h, --help                   help for sprint
+`
+
 // getCmd represents the get command.
 var getCmd = &cobra.Command{
 	Use:     "get",
@@ -215,6 +228,34 @@ var getMyWorklogCmd = &cobra.Command{
 	},
 }
 
+var getSprintCMD = &cobra.Command{
+	Use:   "sprint",
+	Short: "Display current sprint",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		rapidView := getRapidViewID(args[0])
+		if rapidView != nil && rapidView.SprintSupportEnabled {
+			sprints := getSprints(rapidView.ID)
+			sprint := getActiveOrLatestSprint(sprints)
+			contents := getSprintIssues(rapidView.ID, sprint.ID)
+
+			issueTypes := getIssueTypes()
+
+			priorities := getPriorities()
+
+			fmt.Printf("\n%s%s:%s", color.red, "Not completed", color.nocolor)
+			printSprintIssues(contents.IssuesNotCompletedInCurrentSprint, *issueTypes, priorities)
+			fmt.Printf("\n%s%s:%s", color.green, "Completed", color.nocolor)
+			printSprintIssues(contents.CompletedIssues, *issueTypes, priorities)
+			fmt.Printf("\n%s%s:%s", color.blue, "Completed in another sprint", color.nocolor)
+			printSprintIssues(contents.IssuesCompletedInAnotherSprint, *issueTypes, priorities)
+
+		} else {
+			fmt.Printf("%s does not exist or sprint support is not enabled\n", args[0])
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(getCmd)
 	getCmd.AddCommand(getAllIssuesCmd)
@@ -224,6 +265,7 @@ func init() {
 	getCmd.AddCommand(getCommentsCmd)
 	getCmd.AddCommand(getWorklogCmd)
 	getCmd.AddCommand(getMyWorklogCmd)
+	getCmd.AddCommand(getSprintCMD)
 
 	getAllIssuesCmd.Flags().StringVarP(&jqlFilter,
 		"filter", "f", "", "write your own jql filter")
@@ -233,6 +275,8 @@ func init() {
 	getWorklogCmd.SetUsageTemplate(getWorklogUsage)
 
 	getMyWorklogCmd.SetUsageTemplate(myWorklogUsage)
+
+	getSprintCMD.SetUsageTemplate(getSprintUsage)
 }
 
 func issueExists(issueKey *string) bool {
@@ -382,6 +426,66 @@ func getWorklogs(key string) WorklogsResponse {
 	return *jsonResponse
 }
 
+func getRapidViewID(board string) *RapidView {
+	url := config.JiraURL + "/rest/greenhopper/1.0/rapidview"
+
+	resp := new(struct {
+		Views []RapidView `json:"views"`
+	})
+
+	getJSONResponse(http.MethodGet, url, nil, resp)
+
+	for _, x := range resp.Views {
+		if board == x.Name {
+			return &x
+		}
+	}
+
+	return nil
+}
+
+func getSprints(rapidViewID int) []Sprint {
+	url := fmt.Sprintf(
+		"%s/rest/greenhopper/latest/sprintquery/%d?includeHistoricSprints=true&includeFutureSprints=true",
+		config.JiraURL, rapidViewID)
+
+	resp := new(struct {
+		Sprints []Sprint `json:"sprints"`
+	})
+
+	getJSONResponse(http.MethodGet, url, nil, resp)
+
+	return resp.Sprints
+}
+
+func getActiveOrLatestSprint(sprints []Sprint) *Sprint {
+	for _, x := range sprints {
+		if x.State == "ACTIVE" {
+			return &x
+		}
+	}
+
+	// If none of the sprints are active return the most recent
+	if len(sprints) > 0 {
+		return &sprints[len(sprints)-1]
+	}
+
+	return nil
+}
+
+func getSprintIssues(rapidViewID, sprintID int) *SprintContent {
+	url := fmt.Sprintf("%s/rest/greenhopper/latest/rapid/charts/sprintreport?rapidViewId=%d&sprintId=%d",
+		config.JiraURL, rapidViewID, sprintID)
+
+	resp := new(struct {
+		Contents SprintContent `json:"contents"`
+	})
+
+	getJSONResponse(http.MethodGet, url, nil, resp)
+
+	return &resp.Contents
+}
+
 func getUserTimeOnIssueAtDate(user, date string, issues IssuesResponse) []TimeSpentUserIssue {
 	userIssues := []TimeSpentUserIssue{}
 
@@ -392,7 +496,7 @@ func getUserTimeOnIssueAtDate(user, date string, issues IssuesResponse) []TimeSp
 		i.Key = v.Key
 		i.Date = date
 		i.Summary = v.Fields.Summary
-		i.TimeSpent = convertSecondsToHoursAndMinutes(t)
+		i.TimeSpent = convertSecondsToHoursAndMinutes(t, false)
 		i.TimeSpentSeconds = t
 		userIssues = append(userIssues, *i)
 	}
@@ -417,10 +521,15 @@ func getTimeSpentOnIssue(user, date string, key string) int {
 	return timeSpent
 }
 
-func convertSecondsToHoursAndMinutes(seconds int) string {
+func convertSecondsToHoursAndMinutes(seconds int, dropMinutes bool) string {
 	//  Converts number of seconds to a string on format '2h 0m'
 	dur := time.Duration(seconds) * time.Second
 	hm := strings.Split(strconv.FormatFloat(dur.Hours(), 'f', 2, 64), ".")
+
+	if dropMinutes {
+		return fmt.Sprintf("%sh", hm[0])
+	}
+
 	rest, _ := strconv.ParseFloat(hm[1], 64)
 	minutes := (rest / 100) * 60
 
@@ -431,6 +540,26 @@ func getCurrentDate() string {
 	now := time.Now().UTC()
 	// jira date format - "2017-12-07"
 	return now.Format("2006-01-02")
+}
+
+func getIssueTypeNameByID(issueTypes []IssueType, id string) string {
+	for _, x := range issueTypes {
+		if x.ID == id {
+			return x.Name
+		}
+	}
+
+	return "Unknown"
+}
+
+func getPriorityNameByID(priorities []Priority, id string) string {
+	for _, x := range priorities {
+		if x.ID == id {
+			return x.Name
+		}
+	}
+
+	return "Unknown"
 }
 
 func getJSONResponse(method string, url string, payload []byte, jsonResponse interface{}) {
@@ -566,8 +695,28 @@ func printMyWorklog(ti []TimeSpentUserIssue) {
 
 		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
 			strings.Repeat(" ", 73), color.ul, color.nocolor,
-			convertSecondsToHoursAndMinutes(total), color.nocolor)
+			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
 	} else {
 		fmt.Println("You have not logged any hours on this date")
+	}
+}
+
+func printSprintIssues(issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
+	fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", color.ul, color.yellow,
+		"Key", "Type", "Priority", "Summary", "Time Estimate", "Assignee", color.nocolor)
+
+	for _, v := range issues {
+		if len(v.Summary) >= 60 {
+			v.Summary = v.Summary[:60] + ".."
+		}
+
+		est := convertSecondsToHoursAndMinutes(int(v.CurrentEstimateStatistic.StatFieldValue.Value), true)
+		fmt.Printf("%-15s%s%s%-64s%s%s\n",
+			v.Key,
+			formatIssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
+			formatPriority(getPriorityNameByID(priorites, v.PriorityID), true),
+			v.Summary,
+			formatStatus(est, false), // Could change this to something....
+			v.AssigneeName)
 	}
 }

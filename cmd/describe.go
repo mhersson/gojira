@@ -207,8 +207,10 @@ func formatIssueType(issueType string, short bool) string {
 		col = color.blue
 	case "Bug":
 		col = color.red
-	case "Epic":
+	case "Epic", "Story":
 		col = color.magenta
+	case "Setup":
+		col = color.cyan
 	}
 
 	if short {

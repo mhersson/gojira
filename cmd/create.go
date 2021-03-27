@@ -112,14 +112,24 @@ func validateProjectKey(key string, projects IssueCreateMeta) Project {
 	return Project{}
 }
 
-func getPriorities() Priorities {
+func getPriorities() []Priority {
 	url := config.JiraURL + "/rest/api/2/priority"
 
-	jsonResponse := &Priorities{}
+	jsonResponse := &[]Priority{}
 
 	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return *jsonResponse
+}
+
+func getIssueTypes() *[]IssueType {
+	url := config.JiraURL + "/rest/api/2/issuetype"
+
+	jsonResponse := &[]IssueType{}
+
+	getJSONResponse("GET", url, nil, jsonResponse)
+
+	return jsonResponse
 }
 
 func getUserInputPriority() (string, string) {
