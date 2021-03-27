@@ -152,6 +152,16 @@ var getActiveCmd = &cobra.Command{
 	},
 }
 
+var getActiveBoardCmd = &cobra.Command{
+	Use:     "board",
+	Short:   "Display the active board",
+	Args:    cobra.NoArgs,
+	Aliases: []string{"b"},
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Active Board: %s\n", getActiveBoard())
+	},
+}
+
 var getStatusCmd = &cobra.Command{
 	Use:     "status",
 	Short:   "Display the current status",
@@ -233,7 +243,13 @@ var getSprintCMD = &cobra.Command{
 	Short: "Display current sprint",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		rapidView := getRapidViewID(args[0])
+		var board string
+		if len(args) >= 1 {
+			board = args[0]
+		} else {
+			board = getActiveBoard()
+		}
+		rapidView := getRapidViewID(board)
 		if rapidView != nil && rapidView.SprintSupportEnabled {
 			sprints := getSprints(rapidView.ID)
 			sprint := getActiveOrLatestSprint(sprints)
@@ -260,6 +276,7 @@ func init() {
 	rootCmd.AddCommand(getCmd)
 	getCmd.AddCommand(getAllIssuesCmd)
 	getCmd.AddCommand(getActiveCmd)
+	getCmd.AddCommand(getActiveBoardCmd)
 	getCmd.AddCommand(getStatusCmd)
 	getCmd.AddCommand(getTransistionsCmd)
 	getCmd.AddCommand(getCommentsCmd)
@@ -325,6 +342,21 @@ func getActiveIssue() string {
 	out, err := ioutil.ReadFile(issueFile)
 	if err != nil {
 		fmt.Println("Failed to get active issue")
+		os.Exit(1)
+	}
+
+	return string(out)
+}
+
+func getActiveBoard() string {
+	if _, err := os.Stat(boardFile); os.IsNotExist(err) {
+		fmt.Println("Active board is not set")
+		os.Exit(0)
+	}
+
+	out, err := ioutil.ReadFile(boardFile)
+	if err != nil {
+		fmt.Println("Failed to get active board")
 		os.Exit(1)
 	}
 
@@ -436,7 +468,7 @@ func getRapidViewID(board string) *RapidView {
 	getJSONResponse(http.MethodGet, url, nil, resp)
 
 	for _, x := range resp.Views {
-		if board == x.Name {
+		if strings.ToLower(board) == strings.ToLower(x.Name) {
 			return &x
 		}
 	}

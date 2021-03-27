@@ -46,6 +46,7 @@ var assignee string    // Used by `update assignee`
 var cacheFolder = path.Join(getHomeFolder(), ".gojira")
 var issueFile = path.Join(cacheFolder, "issue")
 var issueTypeFile = path.Join(cacheFolder, "issuetype")
+var boardFile = path.Join(cacheFolder, "board")
 
 // Color type.
 type Color struct {
