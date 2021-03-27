@@ -282,7 +282,7 @@ func getUserInput(prompt string, regRange string) string {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	answer := ""
+	var answer string
 
 	for {
 		input, _ := reader.ReadBytes('\n')
@@ -315,7 +315,7 @@ func updateStatus(key string, tr TransitionsResponse) error {
 
 	i, err := strconv.Atoi(index)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w", err)
 	}
 
 	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
@@ -339,6 +339,7 @@ func updateStatus(key string, tr TransitionsResponse) error {
 	resp, err := update("POST", url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
+
 		return err
 	}
 
@@ -355,6 +356,7 @@ func updateDescription(key string, desc []byte) error {
 	resp, err := update("PUT", url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
+
 		return err
 	}
 
@@ -377,6 +379,7 @@ func updateComment(key string, comment []byte, id string) error {
 	resp, err := update("PUT", url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
+
 		return err
 	}
 
@@ -390,6 +393,7 @@ func updateAssignee(key string, user string) error {
 	resp, err := update("PUT", url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
+
 		return err
 	}
 
@@ -406,7 +410,7 @@ func update(method, url string, payload []byte) ([]byte, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w", err)
 	}
 	defer resp.Body.Close()
 
@@ -423,5 +427,6 @@ func validateCommentID(commentID string) bool {
 	// This maybe wrong, but so far I have not
 	// seen an id which is not 6 digits long
 	re := regexp.MustCompile("^[0-9]{6}$")
+
 	return re.MatchString(commentID)
 }

@@ -43,9 +43,9 @@ var workDate string    // Used by `add work` to specify date
 var workComment string // Used by `add work` to add a custom comment to the log
 var jqlFilter string   // Used by `get all` to create customer queries
 var assignee string    // Used by `update assignee`
-var cacheFolder string = path.Join(getHomeFolder(), ".gojira")
-var issueFile string = path.Join(cacheFolder, "issue")
-var issueTypeFile string = path.Join(cacheFolder, "issuetype")
+var cacheFolder = path.Join(getHomeFolder(), ".gojira")
+var issueFile = path.Join(cacheFolder, "issue")
+var issueTypeFile = path.Join(cacheFolder, "issuetype")
 
 // Color type.
 type Color struct {
@@ -60,7 +60,7 @@ type Color struct {
 	nocolor string
 }
 
-//var cfgFile string.
+// var cfgFile string.
 type Config struct {
 	JiraURL      string `yaml:"JiraURL"`
 	Username     string `yaml:"username"`
@@ -140,11 +140,9 @@ func initConfig() {
 	viper.AddConfigPath(exedir)
 	viper.SetConfigName("config")
 
-	//viper.AutomaticEnv() // read in environment variables that match
-
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		//fmt.Println("Using config file:", viper.ConfigFileUsed())
+		// fmt.Println("Using config file:", viper.ConfigFileUsed())
 		config.JiraURL = viper.GetString("JiraURL")
 		config.Username = viper.GetString("username")
 		config.Password = viper.GetString("password")
@@ -202,7 +200,7 @@ func getPassword(config *Config) error {
 func runPass(args []string) (string, error) {
 	output, err := exec.Command("pass", args...).Output()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w", err)
 	}
 
 	return strings.TrimSpace(string(output)), nil
@@ -215,7 +213,7 @@ func decodeGPG(b64Armored string) (string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w", err)
 	}
 
 	return strings.TrimSpace(string(output)), nil

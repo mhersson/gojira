@@ -181,7 +181,7 @@ func validateWorkArgs(args string) (string, error) {
 	if m != nil {
 		num, err := strconv.ParseFloat(m[1], 64)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("%w", err)
 		}
 
 		if m[2] == "h" {
@@ -214,6 +214,7 @@ func setWorkStarttime() string {
 
 func validateDate(date string) bool {
 	re := regexp.MustCompile("202[0-9]-((0[1-9])|(1[0-2]))-((0[1-9])|([1-2][0-9])|(3[0-1]))")
+
 	return re.MatchString(date)
 }
 
@@ -232,6 +233,7 @@ func addWork(key string, seconds string, comment string) error {
 	resp, err := update("POST", url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
+
 		return err
 	}
 
@@ -254,6 +256,7 @@ func addComment(key string, comment []byte) error {
 	resp, err := update("POST", url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
+
 		return err
 	}
 

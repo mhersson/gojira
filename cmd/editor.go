@@ -22,6 +22,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -37,7 +38,7 @@ func openFileInEditor(filename string) error {
 
 	executable, err := exec.LookPath(editor)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w", err)
 	}
 
 	cmd := exec.Command(executable, filename)
@@ -45,13 +46,13 @@ func openFileInEditor(filename string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return cmd.Run()
+	return fmt.Errorf("%w", cmd.Run())
 }
 
 func captureInputFromEditor(text, pattern string) ([]byte, error) {
 	file, err := ioutil.TempFile(os.TempDir(), pattern)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, fmt.Errorf("%w", err)
 	}
 
 	filename := file.Name()
@@ -59,14 +60,14 @@ func captureInputFromEditor(text, pattern string) ([]byte, error) {
 	if text != "" {
 		err := ioutil.WriteFile(filename, []byte(text), 0600)
 		if err != nil {
-			return []byte{}, err
+			return []byte{}, fmt.Errorf("%w", err)
 		}
 	}
 
 	defer os.Remove(filename)
 
 	if err = file.Close(); err != nil {
-		return []byte{}, err
+		return []byte{}, fmt.Errorf("%w", err)
 	}
 
 	if err = openFileInEditor(filename); err != nil {
@@ -75,7 +76,7 @@ func captureInputFromEditor(text, pattern string) ([]byte, error) {
 
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, fmt.Errorf("%w", err)
 	}
 
 	return bytes, nil

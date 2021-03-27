@@ -273,8 +273,7 @@ func validateIssueKey(key *string) {
 }
 
 func getActiveIssue() string {
-	_, err := os.Stat(issueFile)
-	if os.IsNotExist(err) {
+	if _, err := os.Stat(issueFile); os.IsNotExist(err) {
 		fmt.Println("Active issue is not set")
 		os.Exit(1)
 	}
@@ -445,22 +444,24 @@ func getJSONResponse(method string, url string, payload []byte, jsonResponse int
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
+
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//fmt.Println(string(body))
+	// fmt.Println(string(body))
 
 	err = json.Unmarshal(body, jsonResponse)
 	if err != nil {
 		log.Fatalf("Failed to parse json response: %s\n", err)
 	}
+
+	defer resp.Body.Close()
 }
 
 func printIssues(jsonResponse IssuesResponse) {

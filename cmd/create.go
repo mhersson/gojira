@@ -81,7 +81,7 @@ by the user, and only then will the request be sent to JIRA.`,
 
 		fmt.Printf("\n%sSuccessfully created new issue - run describe to see the details%s\n\n",
 			color.green, color.nocolor)
-		//printIssue(getIssue(newKey), IssueDescriptionResponse{})
+		// printIssue(getIssue(newKey), IssueDescriptionResponse{})
 
 	},
 }
@@ -266,7 +266,7 @@ func createNewIssue(project Project, issueTypeID,
 
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w", err)
 	}
 
 	return resp.Key, nil

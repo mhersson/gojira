@@ -96,7 +96,7 @@ func printIssue(issue, epic IssueDescriptionResponse) {
 	if epic.Fields.Summary != "" {
 		fmt.Printf("Epic:              %s\n", formatEpic(epic.Fields.Summary))
 	}
-	////////////////////////////////////////////////////////////////
+	// ******************************************************************
 	fmt.Printf("\n%sPeople:%s%-57s%sDates:%s\n",
 		color.ul, color.nocolor, " ", color.ul, color.nocolor)
 	fmt.Printf("Assignee:          %-45sCreated: %s\n",
@@ -106,19 +106,19 @@ func printIssue(issue, epic IssueDescriptionResponse) {
 		issue.Fields.Reporter.DisplayName+" ("+issue.Fields.Reporter.Name+")",
 		issue.Fields.Updated[:16]) // Truncated at minutes
 
-	////////////////////////////////////////////////////////////////
+	// ******************************************************************
 	fmt.Printf("\n%sTime Tracking:%s\n", color.ul, color.nocolor)
 	fmt.Printf("Estimated: %-25sLogged: %-20sRemaining: %s\n",
 		formatTimeEstimate(issue.Fields.TimeTracking.Estimate),
 		issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.Remaining)
 
-	////////////////////////////////////////////////////////////////
+	// ******************************************************************
 	fmt.Printf("\n%sDescription:%s\n%s\n", color.ul, color.nocolor, issue.Fields.Description)
 
-	////////////////////////////////////////////////////////////////
+	// ******************************************************************
 	printIssueLinks(issue)
 
-	////////////////////////////////////////////////////////////////
+	// ******************************************************************
 	if len(issue.Fields.Comment.Comments) > 0 {
 		fmt.Printf("\n%sLatest comments:%s\n", color.ul, color.nocolor)
 		printComments(issue.Fields.Comment, 3)
@@ -130,7 +130,7 @@ func printIssueLinks(issue IssueDescriptionResponse) {
 	inward := make(map[string][]string)
 
 	for _, link := range issue.Fields.IssueLinks {
-		summary := ""
+		var summary string
 		if link.OutwardIssue.Key == "" {
 			summary = link.InwardIssue.Fields.Summary
 			if len(summary) > 42 {
@@ -222,21 +222,11 @@ func formatStatus(status string, short bool) string {
 	var col string
 
 	switch status {
-	case "Closed":
-		col = color.green
-	case "Resolved":
+	case "Closed", "Resolved":
 		col = color.green
 	case "Ready for Test":
 		col = color.cyan
-	case "Peer Review":
-		col = color.blue
-	case "To Be Fixed":
-		col = color.blue
-	case "Programmed":
-		col = color.blue
-	case "In Progress":
-		col = color.blue
-	case "Accepted":
+	case "Peer Review", "To Be Fixed", "Programmed", "In Progress", "Accepted":
 		col = color.blue
 	case "Rejected":
 		col = color.red
