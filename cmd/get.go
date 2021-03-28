@@ -753,21 +753,21 @@ func formatSprintHeader(sprint Sprint) string {
 }
 
 func printSprintIssues(issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
-	fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", color.ul, color.yellow,
-		"Key", "Type", "Priority", "Summary", "Time Estimate", "Assignee", color.nocolor)
+	fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-20s%s\n", color.ul, color.yellow,
+		"Key", "Type", "Priority", "Summary", "ETA", "Epic", "Assignee", color.nocolor)
 
 	for _, v := range issues {
 		if len(v.Summary) >= 60 {
 			v.Summary = v.Summary[:60] + ".."
 		}
 
-		est := convertSecondsToHoursAndMinutes(int(v.CurrentEstimateStatistic.StatFieldValue.Value), true)
-		fmt.Printf("%-15s%s%s%-64s%s%s\n",
+		fmt.Printf("%-15s%s%s%-64s%-10s%-10s%-15s\n",
 			v.Key,
 			formatIssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
 			formatPriority(getPriorityNameByID(priorites, v.PriorityID), true),
 			v.Summary,
-			formatStatus(est, false), // Could change this to something....
+			convertSecondsToHoursAndMinutes(int(v.CurrentEstimateStatistic.StatFieldValue.Value), true),
+			v.Epic,
 			v.AssigneeName)
 	}
 }

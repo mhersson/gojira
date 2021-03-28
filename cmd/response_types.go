@@ -236,6 +236,7 @@ type SprintIssue struct {
 	PriorityID               string   `json:"priorityId"`
 	Assignee                 string   `json:"assignee"`
 	AssigneeName             string   `json:"assigneeName"`
+	Epic                     string   `json:"epic"`
 	CurrentEstimateStatistic TimeStat `json:"currentEstimateStatistic"`
 	TrackingStatistic        TimeStat `json:"trackingStatistic"`
 	Hidden                   bool     `json:"hidden"`
