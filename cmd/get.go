@@ -259,6 +259,7 @@ var getSprintCMD = &cobra.Command{
 
 			priorities := getPriorities()
 
+			fmt.Println(formatSprintHeader(*sprint))
 			fmt.Printf("\n%s%s:%s", color.red, "Not completed", color.nocolor)
 			printSprintIssues(contents.IssuesNotCompletedInCurrentSprint, *issueTypes, priorities)
 			fmt.Printf("\n%s%s:%s", color.green, "Completed", color.nocolor)
@@ -468,7 +469,7 @@ func getRapidViewID(board string) *RapidView {
 	getJSONResponse(http.MethodGet, url, nil, resp)
 
 	for _, x := range resp.Views {
-		if strings.ToLower(board) == strings.ToLower(x.Name) {
+		if strings.EqualFold(board, x.Name) {
 			return &x
 		}
 	}
@@ -731,6 +732,24 @@ func printMyWorklog(ti []TimeSpentUserIssue) {
 	} else {
 		fmt.Println("You have not logged any hours on this date")
 	}
+}
+
+func formatSprintHeader(sprint Sprint) string {
+	var statusColor string
+
+	switch sprint.State {
+	case "ACTIVE":
+		statusColor = color.green
+	case "CLOSED":
+		statusColor = color.red
+	default:
+		statusColor = color.blue
+	}
+
+	status := fmt.Sprintf("%s(%s%s%s)%s",
+		color.cyan, statusColor, sprint.State, color.cyan, color.nocolor)
+
+	return fmt.Sprintf("%s%s%70s %10s", color.bold, color.yellow, sprint.Name, status)
 }
 
 func printSprintIssues(issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
