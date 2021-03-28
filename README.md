@@ -6,15 +6,21 @@ because of Corona virus quarantine combined with Easter holidays.
 Gojira is the Japanese word for Godzilla.
 
 ### Key Features:
-  - Create issues
+  - Create new issues
   - Add and update comments
-  - Update status and assignee
-  - Add work logs to report time spent
+  - Use your favorite editor set by $EDITOR, defaults to vim
+  - Change status
+  - Assign to yourself or to others
+  - Report time spent
+  - Show comments, current status and the entire worklog
   - One view to show it all with the describe command
-  - Display all unresolved issues currently assigned to you
-  - Use your favorite editor to create and update issues and comments. Gojira uses
-$EDITOR to determine which editor to use (defaults to vim).
-  - Integrates with passwordstore and gpg to keep your password safe
+  - Display all unresolved issues assigned to you
+  - Display the current sprint with all issues and statuses
+  - Mark issue and/or board as active for less typing
+  - Open issue in default browser
+  
+
+Gojira integrates with passwordstore and gpg to keep your password safe.
 
 All commands have a short help text you can access by passing -h or --help.<br/>
 Gojira has full command tab completion support, and most commands have<br/>

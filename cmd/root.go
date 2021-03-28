@@ -90,7 +90,7 @@ because of Corona virus quarantine combined with Easter holidays.
 Gojira is the Japanese word for Godzilla.
 
 Features:
-  - Create a new issue
+  - Create new issues
   - Add and update comments
   - Use your favorite editor set by $EDITOR, defaults to vim
   - Change status
@@ -99,13 +99,15 @@ Features:
   - Show comments, current status and the entire worklog
   - One view to show it all with the describe command
   - Display all unresolved issues assigned to you
-  - Mark and issue as active for less typing
+  - Display the current sprint with all issues and statuses
+  - Mark issue and/or board as active for less typing
+  - Open issue in default browser
 
 Gojira integrates with passwordstore and gpg to keep your password safe.
 
-All commands have a short help text you can access by passing -h or --help.
-Most commands, but not all, have assigned aliases to their first letter
-for less typing.
+All commands have a short help text you can access by passing -h or --help. Most
+commands, but not all, have assigned aliases to their first letter for less
+typing.
 
 Example:
   To show the current active issue (get active) using aliases
