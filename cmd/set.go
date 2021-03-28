@@ -31,47 +31,50 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const setActiveUsage string = `
+Setting an issue as active does not change the status of the issue in JIRA, it
+just tells Gojira that this is your active issue, the one you are currently
+working on. Setting an issue as active removes the need of specifying an
+issueKey with (almost) every command
+
+The same goes for setting a board as active. It marks the given board as your
+board of interest, and will be used by the get sprint command when no other board
+name is specified
+Usage:
+  gojira set active [issue|board] [ISSUE KEY|BOARD NAME] [flags]
+
+Aliases:
+  active, a
+
+Flags:
+  -h, --help                   help for comment
+`
+
 var setCmd = &cobra.Command{
 	Use:   "set",
 	Short: "Set issue or board active",
-	Long: `Set marks and issue or board as active
-
-Active issues and boards will be used as default argument if no other arguments
-are given.`,
 }
 
 var setActiveCmd = &cobra.Command{
-	Use:   "active",
-	Short: "Set issue active",
-	Long: `Set issue active.
-
-This does not change the status of the issue in JIRA, it just tells Gojira that
-this is your active issue, the one you are currently working on. Setting an
-issue as active removes the need of specifying an issueKey with (almost) every
-command`,
+	Use:     "active",
+	Short:   "Set issue or board active",
 	Aliases: []string{"a"},
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		issueKey = strings.ToUpper(args[0])
-		setActiveIssue(issueKey)
-		key := getActiveIssue()
-		fmt.Printf("Issue %s is active\n", key)
-	},
-}
+		switch args[0] {
+		case "issue":
+			issueKey = strings.ToUpper(args[1])
+			setActiveIssue(issueKey)
+			key := getActiveIssue()
+			fmt.Printf("Issue %s is active\n", key)
+		case "board":
+			board := strings.ToLower(args[1])
+			setActiveBoard(board)
+			fmt.Printf("Board '%s' is active\n", board)
+		default:
+			fmt.Println("First argument must be issue or board")
+		}
 
-var setActiveBoardCmd = &cobra.Command{
-	Use:   "board",
-	Short: "Set board as active",
-	Long: `Set the board active.
-
-This marks the given board as active board or your board of interest, and will
-be used by the get sprint command if no other board name is specified.
-`,
-	Aliases: []string{"b"},
-	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		board := strings.ToLower(args[0])
-		setActiveBoard(board)
 	},
 }
 
@@ -79,7 +82,8 @@ func init() {
 	rootCmd.AddCommand(setCmd)
 
 	setCmd.AddCommand(setActiveCmd)
-	setCmd.AddCommand(setActiveBoardCmd)
+
+	setActiveCmd.SetUsageTemplate(setActiveUsage)
 }
 
 func setActiveIssue(key string) {
