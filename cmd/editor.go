@@ -46,7 +46,7 @@ func openFileInEditor(filename string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return fmt.Errorf("%w", cmd.Run())
+	return cmd.Run() //nolint:wrapcheck
 }
 
 func captureInputFromEditor(text, pattern string) ([]byte, error) {
