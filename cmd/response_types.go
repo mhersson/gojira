@@ -107,10 +107,6 @@ type IssueDescriptionResponse struct {
 	} `json:"fields"`
 }
 
-type IssuesResponse struct {
-	Issues []IssueResponse `json:"issues"`
-}
-
 type IssueResponse struct {
 	ID     string `json:"id"`
 	Key    string `json:"key"`

@@ -83,8 +83,8 @@ func init() {
 }
 
 func setActiveIssue(key string) {
-	jsonResponse := getIssues("key = " + key)
-	if len(jsonResponse.Issues) != 1 {
+	issues := getIssues("key = " + key)
+	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist, and can not be set active\n", key)
 		os.Exit(1)
 	}
@@ -105,7 +105,7 @@ func setActiveIssue(key string) {
 	}
 
 	err = ioutil.WriteFile(issueTypeFile,
-		[]byte(jsonResponse.Issues[0].Fields.IssueType.ID), 0600)
+		[]byte(issues[0].Fields.IssueType.ID), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
 		os.Exit(1)

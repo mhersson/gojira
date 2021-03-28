@@ -60,7 +60,17 @@ var describeCmd = &cobra.Command{
 			epic = getIssue(issue.Fields.Epic)
 		}
 
+		var issues []IssueResponse
+		if issue.Fields.IssueType.Name == "Epic" {
+			issues = getIssuesInEpic(issue.Key)
+		}
+
 		printIssue(issue, epic)
+
+		if len(issues) > 0 {
+			fmt.Printf("\n%sIssues in Epic:%s\n", color.ul, color.nocolor)
+			printIssues(issues, false)
+		}
 
 	},
 }
@@ -79,6 +89,18 @@ func getIssue(key string) IssueDescriptionResponse {
 	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return *jsonResponse
+}
+
+func getIssuesInEpic(key string) []IssueResponse {
+	url := config.JiraURL + "/rest/api/2/search?jql=cf[10500]=" + strings.ToUpper(key)
+
+	jsonResponse := new(struct {
+		Issues []IssueResponse `json:"issues"`
+	})
+
+	getJSONResponse("GET", url, nil, jsonResponse)
+
+	return jsonResponse.Issues
 }
 
 func printIssue(issue, epic IssueDescriptionResponse) {

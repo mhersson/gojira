@@ -136,7 +136,7 @@ var getAllIssuesCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Run: func(cmd *cobra.Command, args []string) {
 		myIssues := getIssues(jqlFilter)
-		printIssues(myIssues)
+		printIssues(myIssues, true)
 	},
 }
 
@@ -364,7 +364,7 @@ func getActiveBoard() string {
 	return string(out)
 }
 
-func getIssues(filter string) IssuesResponse {
+func getIssues(filter string) []IssueResponse {
 	url := config.JiraURL + "/rest/api/2/search"
 
 	if filter == "" {
@@ -386,31 +386,33 @@ func getIssues(filter string) IssuesResponse {
 		"priority"]
 	}`)
 
-	jsonResponse := &IssuesResponse{}
+	jsonResponse := new(struct {
+		Issues []IssueResponse `json:"issues"`
+	})
 
-	getJSONResponse("POST", url, payload, &jsonResponse)
+	getJSONResponse("POST", url, payload, jsonResponse)
 
-	return *jsonResponse
+	return jsonResponse.Issues
 }
 
 func getStatus(key string) string {
 	jsonResponse := getIssues("key = " + key)
-	if len(jsonResponse.Issues) != 1 {
+	if len(jsonResponse) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
 	}
 
-	return jsonResponse.Issues[0].Fields.Status.Name
+	return jsonResponse[0].Fields.Status.Name
 }
 
 func getSummary(key string) string {
-	jsonResponse := getIssues("key = " + key)
-	if len(jsonResponse.Issues) != 1 {
+	issues := getIssues("key = " + key)
+	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
 	}
 
-	return jsonResponse.Issues[0].Fields.Summary
+	return issues[0].Fields.Summary
 }
 
 func getTransistions(key string) TransitionsResponse {
@@ -519,10 +521,10 @@ func getSprintIssues(rapidViewID, sprintID int) *SprintContent {
 	return &resp.Contents
 }
 
-func getUserTimeOnIssueAtDate(user, date string, issues IssuesResponse) []TimeSpentUserIssue {
+func getUserTimeOnIssueAtDate(user, date string, issues []IssueResponse) []TimeSpentUserIssue {
 	userIssues := []TimeSpentUserIssue{}
 
-	for _, v := range issues.Issues {
+	for _, v := range issues {
 		t := getTimeSpentOnIssue(user, date, v.Key)
 
 		i := &TimeSpentUserIssue{}
@@ -626,11 +628,13 @@ func getJSONResponse(method string, url string, payload []byte, jsonResponse int
 	defer resp.Body.Close()
 }
 
-func printIssues(jsonResponse IssuesResponse) {
-	fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", color.ul, color.yellow,
-		"Key", "Type", "Priority", "Summary", "Status", "Assignee", color.nocolor)
+func printIssues(jsonResponse []IssueResponse, header bool) {
+	if header {
+		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", color.ul, color.yellow,
+			"Key", "Type", "Priority", "Summary", "Status", "Assignee", color.nocolor)
+	}
 
-	for _, v := range jsonResponse.Issues {
+	for _, v := range jsonResponse {
 		if len(v.Fields.Summary) >= 60 {
 			v.Fields.Summary = v.Fields.Summary[:60] + ".."
 		}
