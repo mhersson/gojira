@@ -1,5 +1,5 @@
-# Gojira looks for config file in either in 
-# $HOME/.config/gojira or same folder as the executable
+# Gojira looks for the config file in either $HOME/.config/gojira or same folder
+# as the executable
 
 jiraurl: https://your.jira.com
 
