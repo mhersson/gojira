@@ -246,12 +246,14 @@ func formatStatus(status string, short bool) string {
 	var col string
 
 	switch status {
-	case "Closed", "Resolved":
+	case "Closed", "Resolved", "Verified":
 		col = color.green
-	case "Ready for Test":
+	case "Programmed", "Peer Review", "Ready for Test", "Ready for review":
 		col = color.cyan
-	case "Peer Review", "To Be Fixed", "Programmed", "In Progress", "Accepted":
+	case "To Be Fixed", "In Progress", "Accepted", "Awaiting info":
 		col = color.blue
+	case "New", "Open":
+		col = color.bold
 	case "Rejected":
 		col = color.red
 	}
