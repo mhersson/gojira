@@ -55,12 +55,12 @@ var describeCmd = &cobra.Command{
 		validateIssueKey(&issueKey)
 		issue := getIssue(issueKey)
 
-		var epic IssueDescriptionResponse
+		var epic IssueDescription
 		if issue.Fields.Epic != "" {
 			epic = getIssue(issue.Fields.Epic)
 		}
 
-		var issues []IssueResponse
+		var issues []Issue
 		if issue.Fields.IssueType.Name == "Epic" {
 			issues = getIssuesInEpic(issue.Key)
 		}
@@ -81,21 +81,21 @@ func init() {
 	describeCmd.SetUsageTemplate(describeUsage)
 }
 
-func getIssue(key string) IssueDescriptionResponse {
+func getIssue(key string) IssueDescription {
 	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key)
 
-	jsonResponse := &IssueDescriptionResponse{}
+	jsonResponse := &IssueDescription{}
 
 	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return *jsonResponse
 }
 
-func getIssuesInEpic(key string) []IssueResponse {
+func getIssuesInEpic(key string) []Issue {
 	url := config.JiraURL + "/rest/api/2/search?jql=cf[10500]=" + strings.ToUpper(key)
 
 	jsonResponse := new(struct {
-		Issues []IssueResponse `json:"issues"`
+		Issues []Issue `json:"issues"`
 	})
 
 	getJSONResponse("GET", url, nil, jsonResponse)
@@ -103,7 +103,7 @@ func getIssuesInEpic(key string) []IssueResponse {
 	return jsonResponse.Issues
 }
 
-func printIssue(issue, epic IssueDescriptionResponse) {
+func printIssue(issue, epic IssueDescription) {
 	fmt.Println()
 	fmt.Println(formatHeader(issue.Fields.Project.Name, issue.Key, issue.Fields.Summary))
 	fmt.Printf("%sDetails:%s\n", color.ul, color.nocolor)
@@ -143,11 +143,11 @@ func printIssue(issue, epic IssueDescriptionResponse) {
 	// ******************************************************************
 	if len(issue.Fields.Comment.Comments) > 0 {
 		fmt.Printf("\n%sLatest comments:%s\n", color.ul, color.nocolor)
-		printComments(issue.Fields.Comment, 3)
+		printComments(issue.Fields.Comment.Comments, 3)
 	}
 }
 
-func printIssueLinks(issue IssueDescriptionResponse) {
+func printIssueLinks(issue IssueDescription) {
 	outward := make(map[string][]string)
 	inward := make(map[string][]string)
 
@@ -296,7 +296,7 @@ func formatTimeEstimate(estimate string) string {
 	return estimate
 }
 
-func formatFixVersions(issue IssueDescriptionResponse) string {
+func formatFixVersions(issue IssueDescription) string {
 	fixVersions := ""
 	for _, v := range issue.Fields.FixVersions {
 		fixVersions += ", " + v.Name

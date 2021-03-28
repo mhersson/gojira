@@ -119,7 +119,7 @@ var updateStatusCmd = &cobra.Command{
 		printStatus(status, false)
 		tr := getTransistions(issueKey)
 		printTransitions(tr)
-		if len(tr.Transitions) >= 1 {
+		if len(tr) >= 1 {
 			err := updateStatus(issueKey, tr)
 			if err != nil {
 				fmt.Printf("Update failed: %s", err.Error())
@@ -309,8 +309,8 @@ func getUserInput(prompt string, regRange string) string {
 	return answer
 }
 
-func updateStatus(key string, tr TransitionsResponse) error {
-	r := fmt.Sprintf("^([0-%d])$", len(tr.Transitions)-1)
+func updateStatus(key string, transitions []Transition) error {
+	r := fmt.Sprintf("^([0-%d])$", len(transitions)-1)
 	index := getUserInput("", r)
 
 	i, err := strconv.Atoi(index)
@@ -319,7 +319,7 @@ func updateStatus(key string, tr TransitionsResponse) error {
 	}
 
 	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
-	id := tr.Transitions[i].ID
+	id := transitions[i].ID
 
 	payload := []byte(`{
 		"update": {

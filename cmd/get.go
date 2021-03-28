@@ -364,7 +364,7 @@ func getActiveBoard() string {
 	return string(out)
 }
 
-func getIssues(filter string) []IssueResponse {
+func getIssues(filter string) []Issue {
 	url := config.JiraURL + "/rest/api/2/search"
 
 	if filter == "" {
@@ -387,7 +387,7 @@ func getIssues(filter string) []IssueResponse {
 	}`)
 
 	jsonResponse := new(struct {
-		Issues []IssueResponse `json:"issues"`
+		Issues []Issue `json:"issues"`
 	})
 
 	getJSONResponse("POST", url, payload, jsonResponse)
@@ -415,50 +415,56 @@ func getSummary(key string) string {
 	return issues[0].Fields.Summary
 }
 
-func getTransistions(key string) TransitionsResponse {
+func getTransistions(key string) []Transition {
 	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
 
-	jsonResponse := &TransitionsResponse{}
+	jsonResponse := new(struct {
+		Transitions []Transition `json:"transitions"`
+	})
 
 	getJSONResponse("GET", url, nil, jsonResponse)
 
-	return *jsonResponse
+	return jsonResponse.Transitions
 }
 
-func getComments(key string) CommentsResponse {
+func getComments(key string) []Comment {
 	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
 
-	jsonResponse := &CommentsResponse{}
+	jsonResponse := new(struct {
+		Comments []Comment `json:"comments"`
+	})
 
 	getJSONResponse("GET", url, nil, jsonResponse)
 
-	return *jsonResponse
+	return jsonResponse.Comments
 }
 
-func getComment(key, commentID string) CommentResponse {
+func getComment(key, commentID string) Comment {
 	comments := getComments(key)
 
-	if commentID == "" && len(comments.Comments) >= 1 {
-		return comments.Comments[len(comments.Comments)-1]
+	if commentID == "" && len(comments) >= 1 {
+		return comments[len(comments)-1]
 	}
 
-	for _, c := range comments.Comments {
+	for _, c := range comments {
 		if c.ID == commentID {
 			return c
 		}
 	}
 
-	return CommentResponse{}
+	return Comment{}
 }
 
-func getWorklogs(key string) WorklogsResponse {
+func getWorklogs(key string) []Worklog {
 	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
 
-	jsonResponse := &WorklogsResponse{}
+	jsonResponse := new(struct {
+		Worklogs []Worklog `json:"worklogs"`
+	})
 
 	getJSONResponse("GET", url, nil, jsonResponse)
 
-	return *jsonResponse
+	return jsonResponse.Worklogs
 }
 
 func getRapidViewID(board string) *RapidView {
@@ -521,7 +527,7 @@ func getSprintIssues(rapidViewID, sprintID int) *SprintContent {
 	return &resp.Contents
 }
 
-func getUserTimeOnIssueAtDate(user, date string, issues []IssueResponse) []TimeSpentUserIssue {
+func getUserTimeOnIssueAtDate(user, date string, issues []Issue) []TimeSpentUserIssue {
 	userIssues := []TimeSpentUserIssue{}
 
 	for _, v := range issues {
@@ -547,7 +553,7 @@ func getTimeSpentOnIssue(user, date string, key string) int {
 
 	timeSpent := 0
 
-	for _, l := range wl.Worklogs {
+	for _, l := range wl {
 		if l.Author.Name == user && strings.HasPrefix(l.Started, date) {
 			timeSpent += l.TimeSpentSeconds
 		}
@@ -628,7 +634,7 @@ func getJSONResponse(method string, url string, payload []byte, jsonResponse int
 	defer resp.Body.Close()
 }
 
-func printIssues(jsonResponse []IssueResponse, header bool) {
+func printIssues(jsonResponse []Issue, header bool) {
 	if header {
 		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", color.ul, color.yellow,
 			"Key", "Type", "Priority", "Summary", "Status", "Assignee", color.nocolor)
@@ -659,21 +665,21 @@ func printStatus(status string, hasBeenUpdated bool) {
 	}
 }
 
-func printTransitions(jsonResponse TransitionsResponse) {
+func printTransitions(transitions []Transition) {
 	fmt.Println("The following transitions are available:")
 
-	for i, v := range jsonResponse.Transitions {
+	for i, v := range transitions {
 		fmt.Printf("%s%s%d.%s %s\n", color.bold, color.yellow, i, color.nocolor, v.Name)
 	}
 }
 
-func printComments(jsonResponse CommentsResponse, maxNumber int) {
-	comments := jsonResponse.Comments
-	if len(jsonResponse.Comments) >= maxNumber && maxNumber != 0 {
-		comments = jsonResponse.Comments[len(jsonResponse.Comments)-maxNumber:]
+func printComments(comments []Comment, maxNumber int) {
+	c := comments
+	if len(comments) >= maxNumber && maxNumber != 0 {
+		c = comments[len(comments)-maxNumber:]
 	}
 
-	for _, v := range comments {
+	for _, v := range c {
 		fmt.Printf("%sComment:    %s%-45sCreated: %s\n", color.yellow, color.nocolor, v.ID, v.Created[:16])
 		fmt.Printf("Visibility: %-45sAuthor: %s (%s)\n", v.Visibility.Value, v.Author.DisplayName, v.Author.Name)
 		fmt.Printf("\n%s", strings.ReplaceAll(v.Body, "{noformat}", "```"))
@@ -681,10 +687,10 @@ func printComments(jsonResponse CommentsResponse, maxNumber int) {
 	}
 }
 
-func printWorklogs(issueKey string, jsonResponse WorklogsResponse) {
+func printWorklogs(issueKey string, worklogs []Worklog) {
 	totalTimeSpent := 0
 
-	for _, v := range jsonResponse.Worklogs {
+	for _, v := range worklogs {
 		totalTimeSpent += v.TimeSpentSeconds
 
 		fmt.Printf("%s %s%-30s%sTime Spent: %s%-8s%s%s\n",

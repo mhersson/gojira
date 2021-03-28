@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package cmd
 
-type IssueDescriptionResponse struct {
+type IssueDescription struct {
 	ID     string `json:"id"`
 	Key    string `json:"key"`
 	Fields struct {
@@ -85,7 +85,9 @@ type IssueDescriptionResponse struct {
 			Name        string `json:"name"`
 			DisplayName string `json:"displayName"`
 		} `json:"reporter"`
-		Worklog   WorklogsResponse `json:"worlog"`
+		Worklog struct {
+			Worklogs []Worklog `json:"worklogs"`
+		} `json:"worklog"`
 		IssueType struct {
 			Name string `json:"name"`
 		} `json:"issueType"`
@@ -103,11 +105,13 @@ type IssueDescriptionResponse struct {
 			Remaining string `json:"remainingEstimate"`
 			TimeSpent string `json:"timeSpent"`
 		} `json:"timetracking"`
-		Comment CommentsResponse `json:"comment"`
+		Comment struct {
+			Comments []Comment `json:"comments"`
+		} `json:"comment"`
 	} `json:"fields"`
 }
 
-type IssueResponse struct {
+type Issue struct {
 	ID     string `json:"id"`
 	Key    string `json:"key"`
 	Fields struct {
@@ -129,11 +133,7 @@ type IssueResponse struct {
 	} `json:"fields"`
 }
 
-type CommentsResponse struct {
-	Comments []CommentResponse `json:"comments"`
-}
-
-type CommentResponse struct {
+type Comment struct {
 	ID     string `json:"id"`
 	Author struct {
 		Name        string `json:"name"`
@@ -146,11 +146,7 @@ type CommentResponse struct {
 	} `json:"visibility"`
 }
 
-type WorklogsResponse struct {
-	Worklogs []WorklogResponse `json:"worklogs"`
-}
-
-type WorklogResponse struct {
+type Worklog struct {
 	Author struct {
 		DisplayName string `json:"displayName"`
 		Name        string `json:"name"`
@@ -162,11 +158,7 @@ type WorklogResponse struct {
 	TimeSpentSeconds int    `json:"timeSpentSeconds"`
 }
 
-type TransitionsResponse struct {
-	Transitions []TransitionResponse `json:"transitions"`
-}
-
-type TransitionResponse struct {
+type Transition struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	To   struct {
