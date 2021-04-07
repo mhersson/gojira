@@ -260,12 +260,10 @@ var getSprintCMD = &cobra.Command{
 			priorities := getPriorities()
 
 			fmt.Println(formatSprintHeader(*sprint))
-			fmt.Printf("\n%s%s:%s", color.red, "Not completed", color.nocolor)
-			printSprintIssues(contents.IssuesNotCompletedInCurrentSprint, *issueTypes, priorities)
-			fmt.Printf("\n%s%s:%s", color.green, "Completed", color.nocolor)
-			printSprintIssues(contents.CompletedIssues, *issueTypes, priorities)
-			fmt.Printf("\n%s%s:%s", color.blue, "Completed in another sprint", color.nocolor)
-			printSprintIssues(contents.IssuesCompletedInAnotherSprint, *issueTypes, priorities)
+
+			printSprintIssues("Not completed", contents.IssuesNotCompletedInCurrentSprint, *issueTypes, priorities)
+			printSprintIssues("Completed", contents.CompletedIssues, *issueTypes, priorities)
+			printSprintIssues("Completed in another sprint", contents.IssuesCompletedInAnotherSprint, *issueTypes, priorities)
 
 		} else {
 			fmt.Printf("%s does not exist or sprint support is not enabled\n", args[0])
@@ -762,22 +760,26 @@ func formatSprintHeader(sprint Sprint) string {
 	return fmt.Sprintf("%s%s%70s %10s", color.bold, color.yellow, sprint.Name, status)
 }
 
-func printSprintIssues(issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
-	fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-20s%s\n", color.ul, color.yellow,
-		"Key", "Type", "Priority", "Summary", "ETA", "Epic", "Assignee", color.nocolor)
+func printSprintIssues(header string, issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
+	if len(issues) > 0 {
+		fmt.Printf("\n%s%s:%s", color.red, header, color.nocolor)
 
-	for _, v := range issues {
-		if len(v.Summary) >= 60 {
-			v.Summary = v.Summary[:60] + ".."
+		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-20s%s\n", color.ul, color.yellow,
+			"Key", "Type", "Priority", "Summary", "ETA", "Epic", "Assignee", color.nocolor)
+
+		for _, v := range issues {
+			if len(v.Summary) >= 60 {
+				v.Summary = v.Summary[:60] + ".."
+			}
+
+			fmt.Printf("%-15s%s%s%-64s%-10s%-10s%-15s\n",
+				v.Key,
+				formatIssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
+				formatPriority(getPriorityNameByID(priorites, v.PriorityID), true),
+				v.Summary,
+				convertSecondsToHoursAndMinutes(int(v.CurrentEstimateStatistic.StatFieldValue.Value), true),
+				v.Epic,
+				v.AssigneeName)
 		}
-
-		fmt.Printf("%-15s%s%s%-64s%-10s%-10s%-15s\n",
-			v.Key,
-			formatIssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
-			formatPriority(getPriorityNameByID(priorites, v.PriorityID), true),
-			v.Summary,
-			convertSecondsToHoursAndMinutes(int(v.CurrentEstimateStatistic.StatFieldValue.Value), true),
-			v.Epic,
-			v.AssigneeName)
 	}
 }
