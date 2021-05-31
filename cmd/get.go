@@ -252,19 +252,20 @@ var getSprintCMD = &cobra.Command{
 		rapidView := getRapidViewID(board)
 		if rapidView != nil && rapidView.SprintSupportEnabled {
 			sprints := getSprints(rapidView.ID)
-			sprint := getActiveOrLatestSprint(sprints)
-			contents := getSprintIssues(rapidView.ID, sprint.ID)
+			for _, sprint := range getActiveOrLatestSprint(sprints) {
+				contents := getSprintIssues(rapidView.ID, sprint.ID)
 
-			issueTypes := getIssueTypes()
+				issueTypes := getIssueTypes()
 
-			priorities := getPriorities()
+				priorities := getPriorities()
 
-			fmt.Println(formatSprintHeader(*sprint))
+				fmt.Println(formatSprintHeader(*sprint))
 
-			printSprintIssues("Not completed", contents.IssuesNotCompletedInCurrentSprint, *issueTypes, priorities)
-			printSprintIssues("Completed", contents.CompletedIssues, *issueTypes, priorities)
-			printSprintIssues("Completed in another sprint", contents.IssuesCompletedInAnotherSprint, *issueTypes, priorities)
+				printSprintIssues("Not completed", contents.IssuesNotCompletedInCurrentSprint, *issueTypes, priorities)
+				printSprintIssues("Completed", contents.CompletedIssues, *issueTypes, priorities)
+				printSprintIssues("Completed in another sprint", contents.IssuesCompletedInAnotherSprint, *issueTypes, priorities)
 
+			}
 		} else {
 			fmt.Printf("%s does not exist or sprint support is not enabled\n", args[0])
 		}
@@ -497,19 +498,27 @@ func getSprints(rapidViewID int) []Sprint {
 	return resp.Sprints
 }
 
-func getActiveOrLatestSprint(sprints []Sprint) *Sprint {
-	for _, x := range sprints {
-		if x.State == "ACTIVE" {
-			return &x
+func getActiveOrLatestSprint(sprints []Sprint) []*Sprint {
+	active := []*Sprint{}
+
+	for x := range sprints {
+		if sprints[x].State == "ACTIVE" {
+			active = append(active, &sprints[x])
 		}
+	}
+
+	if len(active) > 0 {
+		return active
 	}
 
 	// If none of the sprints are active return the most recent
 	if len(sprints) > 0 {
-		return &sprints[len(sprints)-1]
+		active = append(active, &sprints[len(sprints)-1])
+
+		return active
 	}
 
-	return nil
+	return active
 }
 
 func getSprintIssues(rapidViewID, sprintID int) *SprintContent {
