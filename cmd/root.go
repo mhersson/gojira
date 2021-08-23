@@ -63,10 +63,11 @@ type Color struct {
 
 // var cfgFile string.
 type Config struct {
-	JiraURL      string `yaml:"JiraURL"`
-	Username     string `yaml:"username"`
-	Password     string `yaml:"password"`
-	PasswordType string `yaml:"passwordtype"`
+	JiraURL            string `yaml:"JiraURL"`
+	Username           string `yaml:"username"`
+	Password           string `yaml:"password"`
+	PasswordType       string `yaml:"passwordtype"`
+	UseTimesheetPlugin bool   `yaml:"useTimesheetPlugin"`
 }
 
 type Error struct {
@@ -150,6 +151,7 @@ func initConfig() {
 		config.Username = viper.GetString("username")
 		config.Password = viper.GetString("password")
 		config.PasswordType = viper.GetString("passwordtype")
+		config.UseTimesheetPlugin = viper.GetBool("useTimesheetPlugin")
 
 		if config.JiraURL[len(config.JiraURL)-1:] == "/" {
 			config.JiraURL = config.JiraURL[:len(config.JiraURL)-1]

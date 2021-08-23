@@ -227,12 +227,19 @@ var getMyWorklogCmd = &cobra.Command{
 			date = args[0]
 		}
 		if validateDate(date) {
-			issues := getIssues("worklogDate = " + date +
-				" AND worklogAuthor = currentUser()")
+			if config.UseTimesheetPlugin {
+				worklogs := getTimesheet(date)
 
-			myIssues := getUserTimeOnIssueAtDate(config.Username, date, issues)
+				printTimesheet(date, worklogs)
+			} else {
+				issues := getIssues("worklogDate = " + date +
+					" AND worklogAuthor = currentUser()")
 
-			printMyWorklog(myIssues)
+				myIssues := getUserTimeOnIssueAtDate(config.Username, date, issues)
+
+				printMyWorklog(myIssues)
+
+			}
 		}
 	},
 }
@@ -391,6 +398,18 @@ func getIssues(filter string) []Issue {
 	getJSONResponse("POST", url, payload, jsonResponse)
 
 	return jsonResponse.Issues
+}
+
+func getTimesheet(date string) []Timesheet {
+	url := config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date + "&endDate=" + date
+
+	jsonResponse := new(struct {
+		Worklog []Timesheet `json:"worklog"`
+	})
+
+	getJSONResponse(http.MethodGet, url, nil, jsonResponse)
+
+	return jsonResponse.Worklog
 }
 
 func getStatus(key string) string {
@@ -736,6 +755,35 @@ func printMyWorklog(ti []TimeSpentUserIssue) {
 
 			fmt.Printf("%-12s%-15s%-64s%s\n", v.Date, v.Key, v.Summary, v.TimeSpent)
 			total += v.TimeSpentSeconds
+		}
+
+		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
+			strings.Repeat(" ", 73), color.ul, color.nocolor,
+			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
+	} else {
+		fmt.Println("You have not logged any hours on this date")
+	}
+}
+
+func printTimesheet(date string, worklogs []Timesheet) {
+	if len(worklogs) >= 1 {
+		fmt.Printf("%s%s\n%-12s%-15s%-64s%s%s\n", color.ul, color.yellow,
+			"Date", "Key", "Summary", "Time Spent", color.nocolor)
+
+		total := 0
+
+		for _, wl := range worklogs {
+			if len(wl.Summary) > 60 {
+				wl.Summary = wl.Summary[:60] + ".."
+			}
+
+			secs := 0
+			for _, entry := range wl.Entries {
+				secs += entry.TimeSpent
+			}
+
+			fmt.Printf("%-12s%-15s%-64s%s\n", date, wl.Key, wl.Summary, convertSecondsToHoursAndMinutes(secs, false))
+			total += secs
 		}
 
 		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
