@@ -31,7 +31,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -570,18 +569,14 @@ func getTimeSpentOnIssue(user, date string, key string) int {
 }
 
 func convertSecondsToHoursAndMinutes(seconds int, dropMinutes bool) string {
-	//  Converts number of seconds to a string on format '2h 0m'
-	dur := time.Duration(seconds) * time.Second
-	hm := strings.Split(strconv.FormatFloat(dur.Hours(), 'f', 2, 64), ".")
+	hours := seconds / 3600
+	minutes := (seconds % 3600) / 60
 
 	if dropMinutes {
-		return fmt.Sprintf("%sh", hm[0])
+		return fmt.Sprintf("%dh", hours)
 	}
 
-	rest, _ := strconv.ParseFloat(hm[1], 64)
-	minutes := (rest / 100) * 60
-
-	return fmt.Sprintf("%sh %0.fm", hm[0], minutes)
+	return fmt.Sprintf("%dh %dm", hours, minutes)
 }
 
 func getCurrentDate() string {
