@@ -126,7 +126,7 @@ var addWorkCmd = &cobra.Command{
 		}
 
 		fmt.Printf("%sSuccessfully added new worklog.%s\n", color.green, color.nocolor)
-		printTimeTracking(issueKey)
+		// printTimeTracking(issueKey)
 	},
 }
 

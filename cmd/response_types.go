@@ -204,6 +204,18 @@ type TimeSpentUserIssue struct {
 	TimeSpentSeconds int
 }
 
+// Used by getmyworklog command
+// when timesheet plugin is enabled.
+type Timesheet struct {
+	Key     string `json:"key"`
+	Summary string `json:"summary"`
+	Entries []struct {
+		Author         string `json:"author"`
+		AuthorFullName string `json:"authorFullName"`
+		TimeSpent      int    `json:"timeSpent"`
+	}
+}
+
 type RapidView struct {
 	ID                   int    `json:"id"`
 	Name                 string `json:"name"`

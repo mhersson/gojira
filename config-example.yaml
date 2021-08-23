@@ -13,3 +13,8 @@ username: jirauser
 # passwordtype = plain, password = plain text password (only for testing purposes)
 password: my-super-simple-plain-password
 passwordtype: plain
+
+
+# Set this to true if the timesheet plugin is installed on the server
+# Can really improve the speed on some commands, espesially worklog queries.
+useTimesheetPlugin: true
