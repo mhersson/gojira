@@ -223,24 +223,25 @@ type RapidView struct {
 }
 
 type Sprint struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	State string `json:"state"`
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	State     string `json:"state"`
+	IssuesIDs []int  `json:"issuesIds"`
 }
 
 type SprintIssue struct {
-	ID                       int      `json:"id"`
-	Key                      string   `json:"key"`
-	TypeID                   string   `json:"typeId"`
-	Summary                  string   `json:"summary"`
-	PriorityID               string   `json:"priorityId"`
-	Assignee                 string   `json:"assignee"`
-	AssigneeName             string   `json:"assigneeName"`
-	Epic                     string   `json:"epic"`
-	CurrentEstimateStatistic TimeStat `json:"currentEstimateStatistic"`
-	TrackingStatistic        TimeStat `json:"trackingStatistic"`
-	Hidden                   bool     `json:"hidden"`
-	Done                     bool     `json:"done"`
+	ID                int      `json:"id"`
+	Key               string   `json:"key"`
+	TypeID            string   `json:"typeId"`
+	Summary           string   `json:"summary"`
+	PriorityID        string   `json:"priorityId"`
+	Assignee          string   `json:"assignee"`
+	AssigneeName      string   `json:"assigneeName"`
+	Epic              string   `json:"epic"`
+	EstimateStatistic TimeStat `json:"estimateStatistic"`
+	TrackingStatistic TimeStat `json:"trackingStatistic"`
+	Hidden            bool     `json:"hidden"`
+	Done              bool     `json:"done"`
 }
 
 type SprintContent struct {

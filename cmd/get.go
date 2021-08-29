@@ -257,20 +257,14 @@ var getSprintCMD = &cobra.Command{
 		}
 		rapidView := getRapidViewID(board)
 		if rapidView != nil && rapidView.SprintSupportEnabled {
-			sprints := getSprints(rapidView.ID)
+			issueTypes := getIssueTypes()
+			priorities := getPriorities()
+			sprints, issues := getSprints(rapidView.ID)
 			for _, sprint := range getActiveOrLatestSprint(sprints) {
-				contents := getSprintIssues(rapidView.ID, sprint.ID)
-
-				issueTypes := getIssueTypes()
-
-				priorities := getPriorities()
 
 				fmt.Println(formatSprintHeader(*sprint))
 
-				printSprintIssues("Not completed", contents.IssuesNotCompletedInCurrentSprint, *issueTypes, priorities)
-				printSprintIssues("Completed", contents.CompletedIssues, *issueTypes, priorities)
-				printSprintIssues("Completed in another sprint", contents.IssuesCompletedInAnotherSprint, *issueTypes, priorities)
-
+				printSprintIssues(sprint, issues, *issueTypes, priorities)
 			}
 		} else {
 			fmt.Printf("%s does not exist or sprint support is not enabled\n", args[0])
@@ -502,18 +496,19 @@ func getRapidViewID(board string) *RapidView {
 	return nil
 }
 
-func getSprints(rapidViewID int) []Sprint {
+func getSprints(rapidViewID int) ([]Sprint, []SprintIssue) {
 	url := fmt.Sprintf(
-		"%s/rest/greenhopper/latest/sprintquery/%d?includeHistoricSprints=true&includeFutureSprints=true",
+		"%s/rest/greenhopper/1.0/xboard/plan/backlog/data.json?rapidViewId=%d",
 		config.JiraURL, rapidViewID)
 
 	resp := new(struct {
-		Sprints []Sprint `json:"sprints"`
+		Issues  []SprintIssue `json:"issues"`
+		Sprints []Sprint      `json:"sprints"`
 	})
 
 	getJSONResponse(http.MethodGet, url, nil, resp)
 
-	return resp.Sprints
+	return resp.Sprints, resp.Issues
 }
 
 func getActiveOrLatestSprint(sprints []Sprint) []*Sprint {
@@ -537,19 +532,6 @@ func getActiveOrLatestSprint(sprints []Sprint) []*Sprint {
 	}
 
 	return active
-}
-
-func getSprintIssues(rapidViewID, sprintID int) *SprintContent {
-	url := fmt.Sprintf("%s/rest/greenhopper/latest/rapid/charts/sprintreport?rapidViewId=%d&sprintId=%d",
-		config.JiraURL, rapidViewID, sprintID)
-
-	resp := new(struct {
-		Contents SprintContent `json:"contents"`
-	})
-
-	getJSONResponse(http.MethodGet, url, nil, resp)
-
-	return &resp.Contents
 }
 
 func getUserTimeOnIssueAtDate(user, date string, issues []Issue) []TimeSpentUserIssue {
@@ -812,26 +794,40 @@ func formatSprintHeader(sprint Sprint) string {
 	return fmt.Sprintf("%s%s%70s %10s", color.bold, color.yellow, sprint.Name, status)
 }
 
-func printSprintIssues(header string, issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
+func formatSprintStatus(done bool) string {
+	if done {
+		return fmt.Sprintf("%sYes%s", color.green, color.nocolor)
+	}
+
+	return fmt.Sprintf("%sNo%s", color.blue, color.nocolor)
+}
+
+func printSprintIssues(sprint *Sprint, issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
 	if len(issues) > 0 {
-		fmt.Printf("\n%s%s:%s", color.red, header, color.nocolor)
+		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-6s%-20s%s\n", color.ul, color.yellow,
+			"Key", "Type", "Priority", "Summary", "Est.", "Epic", "Done", "Assignee", color.nocolor)
 
-		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-20s%s\n", color.ul, color.yellow,
-			"Key", "Type", "Priority", "Summary", "ETA", "Epic", "Assignee", color.nocolor)
+		for _, i := range sprint.IssuesIDs {
+			for _, v := range issues {
+				if v.ID == i {
+					if len(v.Summary) >= 60 {
+						v.Summary = v.Summary[:60] + ".."
+					}
 
-		for _, v := range issues {
-			if len(v.Summary) >= 60 {
-				v.Summary = v.Summary[:60] + ".."
+					fmt.Printf("%-15s%s%s%-64s%-10s%-10s%-15s%-20s\n",
+						v.Key,
+						formatIssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
+						formatPriority(getPriorityNameByID(priorites, v.PriorityID), true),
+						v.Summary,
+						convertSecondsToHoursAndMinutes(int(v.EstimateStatistic.StatFieldValue.Value), true),
+						v.Epic,
+						formatSprintStatus(v.Done),
+						v.AssigneeName,
+					)
+
+					break
+				}
 			}
-
-			fmt.Printf("%-15s%s%s%-64s%-10s%-10s%-15s\n",
-				v.Key,
-				formatIssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
-				formatPriority(getPriorityNameByID(priorites, v.PriorityID), true),
-				v.Summary,
-				convertSecondsToHoursAndMinutes(int(v.CurrentEstimateStatistic.StatFieldValue.Value), true),
-				v.Epic,
-				v.AssigneeName)
 		}
 	}
 }
