@@ -30,7 +30,7 @@ import (
 
 var unsetCmd = &cobra.Command{
 	Use:   "unset",
-	Short: "Unset (clear) active issue",
+	Short: "Unset (clear) active issue and board",
 	Run: func(cmd *cobra.Command, args []string) {
 		unsetActive()
 	},
@@ -43,9 +43,9 @@ func init() {
 func unsetActive() {
 	err := os.RemoveAll(cacheFolder)
 	if err != nil {
-		fmt.Println("Failed to clear active issue")
+		fmt.Println("Failed to clear active issue and board")
 		os.Exit(1)
 	}
 
-	fmt.Println("Active issue cleared")
+	fmt.Println("Active issue and board cleared")
 }

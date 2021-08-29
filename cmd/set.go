@@ -93,16 +93,9 @@ func setActiveIssue(key string) {
 		os.Exit(1)
 	}
 
-	_, err := os.Stat(issueFile)
-	if os.IsNotExist(err) {
-		err := os.Mkdir(path.Join(getHomeFolder(), ".gojira"), 0755)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
+	createCacheFolder()
 
-	err = ioutil.WriteFile(issueFile, []byte(key), 0600)
+	err := ioutil.WriteFile(issueFile, []byte(key), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
 		os.Exit(1)
@@ -122,17 +115,24 @@ func setActiveBoard(board string) {
 		os.Exit(1)
 	}
 
-	_, err := os.Stat(boardFile)
-	if os.IsNotExist(err) {
-		if err := os.Mkdir(path.Join(getHomeFolder(), ".gojira"), 0755); !os.IsExist(err) {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
+	createCacheFolder()
 
-	err = ioutil.WriteFile(boardFile, []byte(board), 0600)
+	err := ioutil.WriteFile(boardFile, []byte(board), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", board)
 		os.Exit(1)
+	}
+}
+
+func createCacheFolder() {
+	folder := path.Join(getHomeFolder(), ".gojira")
+	_, err := os.Stat(folder)
+
+	if os.IsNotExist(err) {
+		err := os.Mkdir(folder, 0755)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
