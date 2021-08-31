@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 Morten Hersson
+Copyright © 2021 Morten Hersson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ type IssueDescription struct {
 			Name string `json:"name"`
 		} `json:"fixVersions"`
 		Summary    string `json:"summary"`
-		Epic       string `json:"customfield_10500"`
+		Epic       string `json:"customfield_10500"` //nolint:tagliatelle
 		Resolution struct {
 			Name string `json:"name"`
 		} `json:"resolution"`
@@ -96,7 +96,7 @@ type IssueDescription struct {
 		} `json:"project"`
 		ChangeVisibility struct {
 			Value string `json:"value"`
-		} `json:"customfield_10707"`
+		} `json:"customfield_10707"` //nolint:tagliatelle
 		Created      string `json:"created"`
 		Updated      string `json:"updated"`
 		Description  string `json:"description"`
@@ -212,7 +212,9 @@ type Timesheet struct {
 	Entries []struct {
 		Author         string `json:"author"`
 		AuthorFullName string `json:"authorFullName"`
+		Created        int    `json:"created"`
 		TimeSpent      int    `json:"timeSpent"`
+		Comment        string `json:"comment"`
 	}
 }
 

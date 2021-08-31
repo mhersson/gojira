@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 Morten Hersson
+Copyright © 2021 Morten Hersson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -63,7 +63,7 @@ type Color struct {
 
 // var cfgFile string.
 type Config struct {
-	JiraURL            string `yaml:"JiraURL"`
+	JiraURL            string `yaml:"JiraURL"` //nolint:tagliatelle
 	Username           string `yaml:"username"`
 	Password           string `yaml:"password"`
 	PasswordType       string `yaml:"passwordtype"`

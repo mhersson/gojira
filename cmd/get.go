@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 Morten Hersson
+Copyright © 2021 Morten Hersson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +31,15 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 )
+
+// Used by get myworklog.
+var showEntireWeek = false
 
 const getAllIssuesUsage string = `This command will by default display all unresolved
 issues assinged to you, but by using the --filter flag
@@ -103,6 +107,7 @@ Aliases:
 
 Flags:
   -h, --help                   help for myworklog
+  -w, --week                   current week (only with timesheet plugin)
 `
 
 const getSprintUsage string = `
@@ -230,7 +235,11 @@ var getMyWorklogCmd = &cobra.Command{
 			if config.UseTimesheetPlugin {
 				worklogs := getTimesheet(date)
 
-				printTimesheet(date, worklogs)
+				if showEntireWeek {
+					printTimeSheetWeek(worklogs)
+				} else {
+					printTimesheet(date, worklogs)
+				}
 			} else {
 				issues := getIssues("worklogDate = " + date +
 					" AND worklogAuthor = currentUser()")
@@ -292,6 +301,7 @@ func init() {
 	getWorklogCmd.SetUsageTemplate(getWorklogUsage)
 
 	getMyWorklogCmd.SetUsageTemplate(myWorklogUsage)
+	getMyWorklogCmd.Flags().BoolVarP(&showEntireWeek, "week", "w", false, "view current week (only with timesheet plugin)")
 
 	getSprintCMD.SetUsageTemplate(getSprintUsage)
 }
@@ -397,6 +407,11 @@ func getIssues(filter string) []Issue {
 func getTimesheet(date string) []Timesheet {
 	url := config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date + "&endDate=" + date
 
+	if showEntireWeek {
+		date = weekStart(time.Now().ISOWeek())
+		url = config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date
+	}
+
 	jsonResponse := new(struct {
 		Worklog []Timesheet `json:"worklog"`
 	})
@@ -404,6 +419,21 @@ func getTimesheet(date string) []Timesheet {
 	getJSONResponse(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse.Worklog
+}
+
+func weekStart(year, week int) string {
+	t := time.Date(year, 7, 1, 0, 0, 0, 0, time.UTC)
+
+	if wd := t.Weekday(); wd == time.Sunday {
+		t = t.AddDate(0, 0, -6)
+	} else {
+		t = t.AddDate(0, 0, -int(wd)+1)
+	}
+
+	_, w := t.ISOWeek()
+	t = t.AddDate(0, 0, (week-w)*7)
+
+	return t.Format("2006-01-02")
 }
 
 func getStatus(key string) string {
@@ -765,11 +795,61 @@ func printTimesheet(date string, worklogs []Timesheet) {
 			}
 
 			fmt.Printf("%-12s%-15s%-64s%s\n", date, wl.Key, wl.Summary, convertSecondsToHoursAndMinutes(secs, false))
+
 			total += secs
 		}
 
 		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
 			strings.Repeat(" ", 73), color.ul, color.nocolor,
+			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
+	} else {
+		fmt.Println("You have not logged any hours on this date")
+	}
+}
+
+func printTimeSheetWeek(worklogs []Timesheet) {
+	if len(worklogs) >= 1 {
+		type Report struct {
+			Date      string
+			Key       string
+			Summary   string
+			Comment   string
+			TimeSpent int
+		}
+
+		week := []Report{}
+
+		for _, wl := range worklogs {
+			if len(wl.Summary) > 40 {
+				wl.Summary = wl.Summary[:40] + ".."
+			}
+
+			for _, entry := range wl.Entries {
+				if len(entry.Comment) > 31 {
+					entry.Comment = entry.Comment[:31] + ".."
+				}
+
+				date := time.Unix(0, int64(entry.Created*int(time.Millisecond))).Format("2006-01-02")
+				ts := Report{date, wl.Key, wl.Summary, entry.Comment, entry.TimeSpent}
+				week = append(week, ts)
+			}
+		}
+
+		sort.Slice(week, func(i, j int) bool {
+			return week[i].Date < week[j].Date
+		})
+
+		fmt.Printf("%s%s\n%-12s%-15s%-44s%-35s%s%s\n", color.ul, color.yellow,
+			"Date", "Key", "Summary", "Comment", "Time Spent", color.nocolor)
+
+		total := 0
+		for _, w := range week {
+			total += w.TimeSpent
+			fmt.Printf("%-12s%-15s%-44s%-35s%s\n", w.Date, w.Key, w.Summary, w.Comment, convertSecondsToHoursAndMinutes(w.TimeSpent, false))
+		}
+
+		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
+			strings.Repeat(" ", 87), color.ul, color.nocolor,
 			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
 	} else {
 		fmt.Println("You have not logged any hours on this date")
