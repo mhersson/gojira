@@ -408,8 +408,11 @@ func getTimesheet(date string) []Timesheet {
 	url := config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date + "&endDate=" + date
 
 	if showEntireWeek {
-		date = weekStart(time.Now().ISOWeek())
-		url = config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date
+		// Date is already validated, so should be safe
+		// to drop the error check here
+		t, _ := time.Parse("2006-01-02", date)
+		start, end := weekStart(t.ISOWeek())
+		url = config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
 	}
 
 	jsonResponse := new(struct {
@@ -421,7 +424,7 @@ func getTimesheet(date string) []Timesheet {
 	return jsonResponse.Worklog
 }
 
-func weekStart(year, week int) string {
+func weekStart(year, week int) (string, string) {
 	t := time.Date(year, 7, 1, 0, 0, 0, 0, time.UTC)
 
 	if wd := t.Weekday(); wd == time.Sunday {
@@ -432,8 +435,9 @@ func weekStart(year, week int) string {
 
 	_, w := t.ISOWeek()
 	t = t.AddDate(0, 0, (week-w)*7)
+	e := t.AddDate(0, 0, 6)
 
-	return t.Format("2006-01-02")
+	return t.Format("2006-01-02"), e.Format("2006-01-02")
 }
 
 func getStatus(key string) string {

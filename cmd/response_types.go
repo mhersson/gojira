@@ -212,7 +212,7 @@ type Timesheet struct {
 	Entries []struct {
 		Author         string `json:"author"`
 		AuthorFullName string `json:"authorFullName"`
-		Created        int    `json:"created"`
+		Created        int    `json:"startDate"`
 		TimeSpent      int    `json:"timeSpent"`
 		Comment        string `json:"comment"`
 	}
