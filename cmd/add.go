@@ -54,9 +54,9 @@ Flags:
 const addWorkUsage string = `This command will add work to an issue worklog.
 The time must be specified in either hours OR minutes on this format: 2h OR 120m
 
-By default the time is registered on the active issue with todays date,
-but both the issue key and the date can be set explicitly. The issue key as argument,
-and the date by using the date flag.
+By default the time is registered on the active issue with todays date and time,
+but all of them can be set explicitly. The issue key as argument, and the date
+and time by using the date and time flags.
 
 When specifying the issue key the argument order is important,
 and the issue key must always come first.
@@ -73,6 +73,7 @@ Flags:
   -c. --comment                add a comment with the worklog
   -d, --date                   set the date
   -h, --help                   help for work
+  -t, --time                   set the time
 
 Example:
 # Add 2 hours of work to the active issue
@@ -80,6 +81,9 @@ Example:
 
 Example specifying the issue and the date:
   # gojira add work GOJIRA-1 2h --date 2020-04-12
+
+Example specifying the issue and the date and time:
+  # gojira add work GOJIRA-1 2h --date 2020-04-12 --time 20:30
 
 Example specifying the issue and adding a comment:
   # gojira add work GOJIRA-1 2h --comment "Helping out customer X"
@@ -109,24 +113,28 @@ var addWorkCmd = &cobra.Command{
 
 		validateIssueKey(&issueKey)
 		if workDate != "" && !validateDate(workDate) {
-			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd")
+			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd") //nolint:forbidigo
+			os.Exit(1)
+		}
+
+		if workTime != "" && !validateTime(workTime) {
+			fmt.Println("Invalid time. Tate must be on the format hh:mm") //nolint:forbidigo
 			os.Exit(1)
 		}
 
 		duration, err := validateWorkArgs(work)
 		if err != nil {
-			fmt.Printf("Failed to add worklog - %s", err.Error())
+			fmt.Printf("Failed to add worklog - %s", err.Error()) //nolint:forbidigo
 			os.Exit(1)
 		}
 
 		err = addWork(issueKey, duration, workComment)
 		if err != nil {
-			fmt.Printf("Failed to add worklog - %s", err.Error())
+			fmt.Printf("Failed to add worklog - %s", err.Error()) //nolint:forbidigo
 			os.Exit(1)
 		}
 
-		fmt.Printf("%sSuccessfully added new worklog.%s\n", color.green, color.nocolor)
-		// printTimeTracking(issueKey)
+		fmt.Printf("%sSuccessfully added new worklog.%s\n", color.green, color.nocolor) //nolint:forbidigo
 	},
 }
 
@@ -168,6 +176,8 @@ func init() {
 
 	addWorkCmd.PersistentFlags().StringVarP(&workDate,
 		"date", "d", "", "date, overrides the default date (today)")
+	addWorkCmd.PersistentFlags().StringVarP(&workTime,
+		"time", "t", "", "time, overrides the default time (now)")
 	addWorkCmd.PersistentFlags().StringVarP(&workComment,
 		"comment", "c", "", "add a comment to you worklog")
 }
@@ -197,19 +207,23 @@ func validateWorkArgs(args string) (string, error) {
 }
 
 func setWorkStarttime() string {
-	now := time.Now().UTC()
+	now := time.Now()
+	zone, _ := now.Zone()
+
 	// jira time format - "started": "2017-12-07T09:23:19.552+0000"
 	startTime := now.Format("2006-01-02T15:04:05.000+0000")
 
-	if workDate == "" {
+	if workDate == "" && workTime == "" {
 		return startTime
+	} else if workDate != "" && workTime == "" {
+		workTime = time.Now().Format("15:04")
+	} else if workDate == "" && workTime != "" {
+		workDate = now.Format("2006-01-02")
 	}
 
-	// Shouldn't get here unless the workDate is valid
-	re := regexp.MustCompile("202[0-9]-((0[1-9])|(1[0-2]))-((0[1-9])|([1-2][0-9])|(3[0-1]))")
-	startTime = re.ReplaceAllString(startTime, workDate)
+	t, _ := time.Parse("2006-01-02 15:04 MST", fmt.Sprintf("%s %s %s", workDate, workTime, zone))
 
-	return startTime
+	return t.UTC().Format("2006-01-02T15:04:05.000+0000")
 }
 
 func validateDate(date string) bool {
@@ -218,6 +232,11 @@ func validateDate(date string) bool {
 	return re.MatchString(date)
 }
 
+func validateTime(time string) bool {
+	re := regexp.MustCompile("([0-1][0-9]|2[0-3]):[0-5][0-9]")
+
+	return re.MatchString(time)
+}
 func addWork(key string, seconds string, comment string) error {
 	if comment == "" {
 		comment = "Worklog updated by Gojira"

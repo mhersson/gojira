@@ -40,6 +40,7 @@ var color = Color{"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\
 	"\033[1m", "\033[4m", "\033[0m"}
 var issueKey string
 var workDate string    // Used by `add work` to specify date
+var workTime string    // Used by `add work` to specify at what time the work was done
 var workComment string // Used by `add work` to add a custom comment to the log
 var jqlFilter string   // Used by `get all` to create customer queries
 var assignee string    // Used by `update assignee`
