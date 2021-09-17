@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -35,6 +36,12 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
+
+// Variables inserted at build time from the Makefile
+// Used by the version checking.
+var GojiraVersion string
+var GojiraGitRevision string
+var GojiraRepository string
 
 var color = Color{"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m",
 	"\033[1m", "\033[4m", "\033[0m"}
@@ -48,6 +55,7 @@ var cacheFolder = path.Join(getHomeFolder(), ".gojira")
 var issueFile = path.Join(cacheFolder, "issue")
 var issueTypeFile = path.Join(cacheFolder, "issuetype")
 var boardFile = path.Join(cacheFolder, "board")
+var versionFlag bool
 
 // Color type.
 type Color struct {
@@ -69,6 +77,7 @@ type Config struct {
 	Password           string `yaml:"password"`
 	PasswordType       string `yaml:"passwordtype"`
 	UseTimesheetPlugin bool   `yaml:"useTimesheetPlugin"`
+	CheckForUpdates    bool   `yaml:"checkForUpdates"`
 }
 
 type Error struct {
@@ -81,10 +90,7 @@ func (e *Error) Error() string {
 
 var config Config
 
-// rootCmd represents the base command when called without any subcommands.
-var rootCmd = &cobra.Command{
-	Use: "gojira",
-	Long: `The Gojira JIRA client
+var rootCmdLong = `The Gojira JIRA client
 
 This project is a product of me being bored out of my mind
 because of Corona virus quarantine combined with Easter holidays.
@@ -110,14 +116,22 @@ Gojira integrates with passwordstore and gpg to keep your password safe.
 All commands have a short help text you can access by passing -h or --help. Most
 commands, but not all, have assigned aliases to their first letter for less
 typing.
+`
 
-Example:
-  To show the current active issue (get active) using aliases
-  # gojira g a`,
+// rootCmd represents the base command when called without any subcommands.
+var rootCmd = &cobra.Command{
+	Use:  "gojira",
+	Long: rootCmdLong,
+	Run: func(cmd *cobra.Command, args []string) {
+		if versionFlag {
+			fmt.Printf("Gojira version: %s,  git rev: %s\n", GojiraVersion, GojiraGitRevision) //nolint:forbidigo
+
+			os.Exit(0)
+		}
+		fmt.Println(rootCmdLong)
+	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -127,9 +141,10 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "Print version information")
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	home := getHomeFolder()
 
@@ -140,19 +155,17 @@ func initConfig() {
 
 	exedir := path.Dir(ex)
 
-	// Search config in home directory with name "config" (without extension).
 	viper.AddConfigPath(path.Join(home, ".config/gojira"))
 	viper.AddConfigPath(exedir)
 	viper.SetConfigName("config")
 
-	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		// fmt.Println("Using config file:", viper.ConfigFileUsed())
 		config.JiraURL = viper.GetString("JiraURL")
 		config.Username = viper.GetString("username")
 		config.Password = viper.GetString("password")
 		config.PasswordType = viper.GetString("passwordtype")
 		config.UseTimesheetPlugin = viper.GetBool("useTimesheetPlugin")
+		config.CheckForUpdates = viper.GetBool("checkForUpdates")
 
 		if config.JiraURL[len(config.JiraURL)-1:] == "/" {
 			config.JiraURL = config.JiraURL[:len(config.JiraURL)-1]
@@ -163,6 +176,11 @@ func initConfig() {
 			fmt.Println("Failed to get password")
 			os.Exit(1)
 		}
+	}
+
+	if GojiraGitRevision != "" && config.CheckForUpdates {
+		revs := runGit([]string{"ls-remote", GojiraRepository})
+		getLatestRevision(revs)
 	}
 }
 
@@ -223,4 +241,22 @@ func decodeGPG(b64Armored string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+func getLatestRevision(revs string) {
+	re := regexp.MustCompile(`([a-z0-9]{40})\s{1,}refs/heads/main`)
+	m := re.FindStringSubmatch(revs)
+
+	if len(m) == 2 {
+		if !strings.HasPrefix(m[1], GojiraGitRevision) {
+			fmt.Println("A new version of Gojira is available") //nolint:forbidigo
+		}
+	}
+}
+
+func runGit(args []string) string {
+	out, err := exec.Command("git", args...).CombinedOutput()
+	cobra.CheckErr(err)
+
+	return strings.TrimSpace(string(out))
 }

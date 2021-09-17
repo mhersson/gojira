@@ -18,3 +18,9 @@ passwordtype: plain
 # Set this to true if the timesheet plugin is installed on the server
 # Can really improve the speed on some commands, espesially worklog queries.
 useTimesheetPlugin: true
+
+# When set to true Gojira will issue a git ls-remote towards the Gojira repository
+# and print a message if the current git revision does not match the main branch
+# This only works if gojira is built using the Makefile, and the git executable is
+# in your path
+checkForUpdates: true
