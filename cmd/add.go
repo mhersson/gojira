@@ -113,28 +113,28 @@ var addWorkCmd = &cobra.Command{
 
 		validateIssueKey(&issueKey)
 		if workDate != "" && !validateDate(workDate) {
-			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd") //nolint:forbidigo
+			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd")
 			os.Exit(1)
 		}
 
 		if workTime != "" && !validateTime(workTime) {
-			fmt.Println("Invalid time. Tate must be on the format hh:mm") //nolint:forbidigo
+			fmt.Println("Invalid time. Tate must be on the format hh:mm")
 			os.Exit(1)
 		}
 
 		duration, err := validateWorkArgs(work)
 		if err != nil {
-			fmt.Printf("Failed to add worklog - %s", err.Error()) //nolint:forbidigo
+			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
 		}
 
 		err = addWork(issueKey, duration, workComment)
 		if err != nil {
-			fmt.Printf("Failed to add worklog - %s", err.Error()) //nolint:forbidigo
+			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
 		}
 
-		fmt.Printf("%sSuccessfully added new worklog.%s\n", color.green, color.nocolor) //nolint:forbidigo
+		fmt.Printf("%sSuccessfully added new worklog.%s\n", color.green, color.nocolor)
 	},
 }
 
@@ -213,11 +213,12 @@ func setWorkStarttime() string {
 	// jira time format - "started": "2017-12-07T09:23:19.552+0000"
 	startTime := now.Format("2006-01-02T15:04:05.000+0000")
 
-	if workDate == "" && workTime == "" {
+	switch {
+	case workDate == "" && workTime == "":
 		return startTime
-	} else if workDate != "" && workTime == "" {
+	case workDate != "" && workTime == "":
 		workTime = time.Now().Format("15:04")
-	} else if workDate == "" && workTime != "" {
+	case workDate == "" && workTime != "":
 		workDate = now.Format("2006-01-02")
 	}
 

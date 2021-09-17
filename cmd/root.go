@@ -124,7 +124,7 @@ var rootCmd = &cobra.Command{
 	Long: rootCmdLong,
 	Run: func(cmd *cobra.Command, args []string) {
 		if versionFlag {
-			fmt.Printf("Gojira version: %s,  git rev: %s\n", GojiraVersion, GojiraGitRevision) //nolint:forbidigo
+			fmt.Printf("Gojira version: %s,  git rev: %s\n", GojiraVersion, GojiraGitRevision)
 
 			os.Exit(0)
 		}
@@ -249,7 +249,7 @@ func getLatestRevision(revs string) {
 
 	if len(m) == 2 {
 		if !strings.HasPrefix(m[1], GojiraGitRevision) {
-			fmt.Println("A new version of Gojira is available") //nolint:forbidigo
+			fmt.Println("A new version of Gojira is available")
 		}
 	}
 }
