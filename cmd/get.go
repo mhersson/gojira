@@ -234,12 +234,7 @@ var getMyWorklogCmd = &cobra.Command{
 		if validateDate(date) {
 			if config.UseTimesheetPlugin {
 				worklogs := getTimesheet(date)
-
-				if showEntireWeek {
-					printTimeSheetWeek(worklogs)
-				} else {
-					printTimesheet(date, worklogs)
-				}
+				printTimesheet(worklogs)
 			} else {
 				issues := getIssues("worklogDate = " + date +
 					" AND worklogAuthor = currentUser()")
@@ -813,37 +808,7 @@ func printMyWorklog(ti []TimeSpentUserIssue) {
 	}
 }
 
-func printTimesheet(date string, worklogs []Timesheet) {
-	if len(worklogs) >= 1 {
-		fmt.Printf("%s%s\n%-12s%-15s%-64s%s%s\n", color.ul, color.yellow,
-			"Date", "Key", "Summary", "Time Spent", color.nocolor)
-
-		total := 0
-
-		for _, wl := range worklogs {
-			if len(wl.Summary) > 60 {
-				wl.Summary = wl.Summary[:60] + ".."
-			}
-
-			secs := 0
-			for _, entry := range wl.Entries {
-				secs += entry.TimeSpent
-			}
-
-			fmt.Printf("%-12s%-15s%-64s%s\n", date, wl.Key, wl.Summary, convertSecondsToHoursAndMinutes(secs, false))
-
-			total += secs
-		}
-
-		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
-			strings.Repeat(" ", 73), color.ul, color.nocolor,
-			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
-	} else {
-		fmt.Println("You have not logged any hours on this date")
-	}
-}
-
-func printTimeSheetWeek(worklogs []Timesheet) {
+func printTimesheet(worklogs []Timesheet) {
 	if len(worklogs) >= 1 {
 		week := getWorklogsSorted(worklogs, true)
 
@@ -858,7 +823,7 @@ func printTimeSheetWeek(worklogs []Timesheet) {
 		}
 
 		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
-			strings.Repeat(" ", 87), color.ul, color.nocolor,
+			strings.Repeat(" ", 88), color.ul, color.nocolor,
 			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
 	} else {
 		fmt.Println("You have not logged any hours on this date")

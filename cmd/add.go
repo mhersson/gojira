@@ -248,10 +248,6 @@ func validateTime(time string) bool {
 }
 
 func addWork(key string, seconds string, comment string) error {
-	if comment == "" {
-		comment = "Worklog updated by Gojira"
-	}
-
 	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
 	payload := []byte(`{
 		"comment": "` + comment + `",
