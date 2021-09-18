@@ -411,7 +411,7 @@ func getTimesheet(date string) []Timesheet {
 		// Date is already validated, so should be safe
 		// to drop the error check here
 		t, _ := time.Parse("2006-01-02", date)
-		start, end := weekStart(t.ISOWeek())
+		start, end := weekStartEndDate(t.ISOWeek())
 		url = config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
 	}
 
@@ -424,7 +424,7 @@ func getTimesheet(date string) []Timesheet {
 	return jsonResponse.Worklog
 }
 
-func weekStart(year, week int) (string, string) {
+func weekStartEndDate(year, week int) (string, string) {
 	t := time.Date(year, 7, 1, 0, 0, 0, 0, time.UTC)
 
 	if wd := t.Weekday(); wd == time.Sunday {
@@ -575,6 +575,7 @@ func getUserTimeOnIssueAtDate(user, date string, issues []Issue) []TimeSpentUser
 		t := getTimeSpentOnIssue(user, date, v.Key)
 
 		i := &TimeSpentUserIssue{}
+		i.ID = v.ID
 		i.Key = v.Key
 		i.Date = date
 		i.Summary = v.Fields.Summary
@@ -611,6 +612,10 @@ func convertSecondsToHoursAndMinutes(seconds int, dropMinutes bool) string {
 		return fmt.Sprintf("%dh", hours)
 	}
 
+	if minutes < 10 {
+		return fmt.Sprintf("%dh 0%dm", hours, minutes)
+	}
+
 	return fmt.Sprintf("%dh %dm", hours, minutes)
 }
 
@@ -638,6 +643,33 @@ func getPriorityNameByID(priorities []Priority, id string) string {
 	}
 
 	return "Unknown"
+}
+
+func getWorklogsSorted(worklogs []Timesheet, truncate bool) []SimplifiedTimesheet {
+	week := []SimplifiedTimesheet{}
+
+	for _, wl := range worklogs {
+		if len(wl.Summary) > 40 && truncate {
+			wl.Summary = wl.Summary[:40] + ".."
+		}
+
+		for _, entry := range wl.Entries {
+			if len(entry.Comment) > 31 && truncate {
+				entry.Comment = entry.Comment[:31] + ".."
+			}
+
+			date := time.Unix(0, int64(entry.StartDate*int(time.Millisecond))).Format("2006-01-02")
+			startdate := time.Unix(0, int64(entry.StartDate*int(time.Millisecond))).Format("2006-01-02 15:04")
+			ts := SimplifiedTimesheet{entry.ID, date, startdate, wl.Key, wl.Summary, entry.Comment, entry.TimeSpent}
+			week = append(week, ts)
+		}
+	}
+
+	sort.Slice(week, func(i, j int) bool {
+		return week[i].Date < week[j].Date
+	})
+
+	return week
 }
 
 func getJSONResponse(method string, url string, payload []byte, jsonResponse interface{}) {
@@ -813,35 +845,7 @@ func printTimesheet(date string, worklogs []Timesheet) {
 
 func printTimeSheetWeek(worklogs []Timesheet) {
 	if len(worklogs) >= 1 {
-		type Report struct {
-			Date      string
-			Key       string
-			Summary   string
-			Comment   string
-			TimeSpent int
-		}
-
-		week := []Report{}
-
-		for _, wl := range worklogs {
-			if len(wl.Summary) > 40 {
-				wl.Summary = wl.Summary[:40] + ".."
-			}
-
-			for _, entry := range wl.Entries {
-				if len(entry.Comment) > 31 {
-					entry.Comment = entry.Comment[:31] + ".."
-				}
-
-				date := time.Unix(0, int64(entry.Created*int(time.Millisecond))).Format("2006-01-02")
-				ts := Report{date, wl.Key, wl.Summary, entry.Comment, entry.TimeSpent}
-				week = append(week, ts)
-			}
-		}
-
-		sort.Slice(week, func(i, j int) bool {
-			return week[i].Date < week[j].Date
-		})
+		week := getWorklogsSorted(worklogs, true)
 
 		fmt.Printf("%s%s\n%-12s%-15s%-44s%-35s%s%s\n", color.ul, color.yellow,
 			"Date", "Key", "Summary", "Comment", "Time Spent", color.nocolor)
@@ -849,7 +853,8 @@ func printTimeSheetWeek(worklogs []Timesheet) {
 		total := 0
 		for _, w := range week {
 			total += w.TimeSpent
-			fmt.Printf("%-12s%-15s%-44s%-35s%s\n", w.Date, w.Key, w.Summary, w.Comment, convertSecondsToHoursAndMinutes(w.TimeSpent, false))
+			fmt.Printf("%-12s%-15s%-44s%-35s%s\n",
+				w.Date, w.Key, w.Summary, w.Comment, convertSecondsToHoursAndMinutes(w.TimeSpent, false))
 		}
 
 		fmt.Printf("%s%sTotal time spent:%s %s%s\n",

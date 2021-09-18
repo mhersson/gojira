@@ -1,0 +1,12 @@
+{{ range $index,$log := . }}
+{{- if eq $index 0 -}}
+Editing your worklog for {{ .Date }}
+-------------------------------------
+
+You can edit the time, time spent and the comment.
+All other changes will be discarded when exiting the editor.
+------------------------------------------------------------
+
+{{- end }}
+(#{{ .ID }})    {{ .Key | printf "%-10s"}}    {{ .StartDate | getTime |printf "%-5s" }}    {{  convertTimeSpent .TimeSpent false |printf "%-6s"}}    {{ .Comment }}
+{{- end }}

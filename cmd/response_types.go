@@ -196,6 +196,7 @@ type Priority struct {
 // Struct for representing the time a user
 // has spent on an issue on a given date.
 type TimeSpentUserIssue struct {
+	ID               string
 	Key              string
 	Date             string
 	User             string
@@ -210,12 +211,25 @@ type Timesheet struct {
 	Key     string `json:"key"`
 	Summary string `json:"summary"`
 	Entries []struct {
+		ID             int    `json:"id"`
 		Author         string `json:"author"`
 		AuthorFullName string `json:"authorFullName"`
-		Created        int    `json:"startDate"`
+		StartDate      int    `json:"startDate"`
 		TimeSpent      int    `json:"timeSpent"`
 		Comment        string `json:"comment"`
 	}
+}
+
+// Used by worklog command to be able to
+// sort and edit worklogs
+type SimplifiedTimesheet struct {
+	ID        int
+	Date      string
+	StartDate string
+	Key       string
+	Summary   string
+	Comment   string
+	TimeSpent int
 }
 
 type RapidView struct {

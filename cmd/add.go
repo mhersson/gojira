@@ -122,7 +122,7 @@ var addWorkCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		duration, err := validateWorkArgs(work)
+		duration, err := convertDurationStringToSeconds(work)
 		if err != nil {
 			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
@@ -182,22 +182,30 @@ func init() {
 		"comment", "c", "", "add a comment to you worklog")
 }
 
-func validateWorkArgs(args string) (string, error) {
-	re := regexp.MustCompile("^([0-9.]{1,})([m|h])$")
+func convertDurationStringToSeconds(args string) (string, error) {
+	// Format 0.5h OR 30m alone or 1h 30m combined
+	re := regexp.MustCompile(`((([0-9.]{1,})(h))?\s?(([0-6]?[0-9])(m))?)`)
 	m := re.FindStringSubmatch(args)
 
 	var seconds float64
 
 	if m != nil {
-		num, err := strconv.ParseFloat(m[1], 64)
-		if err != nil {
-			return "", fmt.Errorf("%w", err)
+		if m[3] != "" {
+			num, err := strconv.ParseFloat(m[3], 64)
+			if err != nil {
+				return "", fmt.Errorf("%w", err)
+			}
+
+			seconds += num * 3600
 		}
 
-		if m[2] == "h" {
-			seconds = num * 3600
-		} else {
-			seconds = num * 60
+		if m[6] != "" {
+			num, err := strconv.ParseFloat(m[6], 64)
+			if err != nil {
+				return "", fmt.Errorf("%w", err)
+			}
+
+			seconds += num * 60
 		}
 
 		return strconv.FormatFloat(seconds, 'f', 0, 64), nil
@@ -238,6 +246,7 @@ func validateTime(time string) bool {
 
 	return re.MatchString(time)
 }
+
 func addWork(key string, seconds string, comment string) error {
 	if comment == "" {
 		comment = "Worklog updated by Gojira"

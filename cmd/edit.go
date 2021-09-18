@@ -22,13 +22,21 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"bytes"
+	"embed"
 	"fmt"
+	"html/template"
 	"os"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
+
+//go:embed templates/*.tmpl
+var templateFS embed.FS
 
 const editDescriptionUsage string = `By default the active issue is edited,
 but this can be changed by adding the issue key as argument.
@@ -63,8 +71,7 @@ Flags:
 
 var editCmd = &cobra.Command{
 	Use:     "edit",
-	Short:   "Edit",
-	Long:    "Edit comments, descriptions, worklog",
+	Long:    "Edit comments, descriptions and your worklog",
 	Args:    cobra.NoArgs,
 	Aliases: []string{"u"},
 }
@@ -169,11 +176,37 @@ var editCommentCmd = &cobra.Command{
 	},
 }
 
+var editMyWorklogCmd = &cobra.Command{
+	Use:   "myworklog",
+	Short: "Edit your worklog for a given date",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		date := getCurrentDate()
+		if len(args) == 1 {
+			date = args[0]
+		}
+		if config.UseTimesheetPlugin {
+			if validateDate(date) {
+				ts := getTimesheet(date)
+				worklogs := getWorklogsSorted(ts, false)
+				out := executeInternalTemplate("edit-worklog.tmpl", worklogs)
+				edited, err := captureInputFromEditor(string(out), "edit-worklog-*")
+				cobra.CheckErr(err)
+				editedWorklogs := parseEditedWorklog(date, edited)
+				updateChangedWorklogs(worklogs, editedWorklogs)
+			}
+		} else {
+			fmt.Println("This command is currently only supported with the timesheet plugin enabled")
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(editCmd)
 
 	editCmd.AddCommand(editDescrptionCmd)
 	editCmd.AddCommand(editCommentCmd)
+	editCmd.AddCommand(editMyWorklogCmd)
 
 	editDescrptionCmd.SetUsageTemplate(editDescriptionUsage)
 	editCommentCmd.SetUsageTemplate(editCommentUsage)
@@ -219,10 +252,120 @@ func updateComment(key string, comment []byte, id string) error {
 	return nil
 }
 
+func updateWorklog(worklog SimplifiedTimesheet) error {
+	dateAndTime := strings.Split(worklog.StartDate, " ")
+	if len(dateAndTime) != 2 {
+		return &Error{"invalid date and time"}
+	}
+
+	workDate = dateAndTime[0]
+	workTime = dateAndTime[1]
+
+	url := config.JiraURL + "/rest/api/2/issue/" +
+		strings.ToUpper(worklog.Key) + "/worklog/" + strconv.Itoa(worklog.ID) + "/"
+
+	payload := []byte(`{
+		"id": "` + strconv.Itoa(worklog.ID) + `",
+		"comment": "` + worklog.Comment + `",
+		"started": "` + setWorkStarttime() + `",
+		"timeSpentSeconds": ` + strconv.Itoa(worklog.TimeSpent) +
+		`}`)
+
+	resp, err := update("PUT", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func updateChangedWorklogs(worklogs, editedWorklogs []SimplifiedTimesheet) {
+	success := 0
+
+	for _, e := range editedWorklogs {
+		for _, w := range worklogs {
+			if e.ID == w.ID && (e.StartDate != w.StartDate || e.TimeSpent != w.TimeSpent || e.Comment != w.Comment) {
+				err := updateWorklog(e)
+				if err != nil {
+					fmt.Printf("Failed to update worklog id: %d, key; %s\n", e.ID, e.Key)
+					fmt.Printf("%v\n", err)
+					os.Exit(1)
+				}
+				success++
+
+				break
+			}
+		}
+	}
+
+	if success >= 1 {
+		fmt.Printf("Successfully updated %d worklog entries\n", success)
+	}
+}
+
 func validateCommentID(commentID string) bool {
 	// This maybe wrong, but so far I have not
 	// seen an id which is not 6 digits long
 	re := regexp.MustCompile("^[0-9]{6}$")
 
 	return re.MatchString(commentID)
+}
+
+func executeInternalTemplate(filename string, content interface{}) []byte {
+	temp, err := templateFS.ReadFile(filepath.Join("templates", filename))
+	if err != nil {
+		panic(err)
+	}
+
+	t := template.Must(template.New(filepath.Base(filename)).Funcs(templateFuncMap()).Parse(string(temp)))
+
+	var buffer bytes.Buffer
+
+	err = t.Execute(&buffer, content)
+	if err != nil {
+		panic(err)
+	}
+
+	return buffer.Bytes()
+}
+
+func templateFuncMap() template.FuncMap {
+	var fns = template.FuncMap{
+		"getTime": func(date string) string {
+			return strings.Split(date, " ")[1]
+		},
+		"convertTimeSpent": convertSecondsToHoursAndMinutes,
+	}
+
+	return fns
+}
+
+func parseEditedWorklog(date string, logs []byte) []SimplifiedTimesheet {
+	// (#123456)    ISSUE-1       14:30    0h 30m    Some comment
+	re := regexp.MustCompile(
+		`\(#([0-9]{6})\)\s{1,}([A-Z]{2,9}-[0-9]{1,4})\s{1,}` +
+			`(([0-1][0-9]|2[0-3]):[0-5][0-9])\s{1,}(([0-9.]{1,}h)?\s?([0-6]?[0-9]m)?)\s*([A-Za-z0-9,\s]+)`)
+
+	m := re.FindAllStringSubmatch(string(logs), -1)
+
+	worklogs := []SimplifiedTimesheet{}
+
+	for _, match := range m {
+		ts := new(SimplifiedTimesheet)
+		ts.ID, _ = strconv.Atoi(match[1])
+		ts.Key = match[2]
+		ts.StartDate = date + " " + match[3]
+
+		d, err := convertDurationStringToSeconds(match[5])
+		cobra.CheckErr(err)
+
+		ts.TimeSpent, _ = strconv.Atoi(d)
+		ts.Comment = strings.TrimSpace(match[8])
+
+		worklogs = append(worklogs, *ts)
+	}
+
+	return worklogs
 }
