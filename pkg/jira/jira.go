@@ -75,7 +75,7 @@ func GetIssues(filter string) []types.Issue {
 		Issues []types.Issue `json:"issues"`
 	})
 
-	getJSONResponse("POST", url, payload, jsonResponse)
+	query(http.MethodPost, url, payload, jsonResponse)
 
 	return jsonResponse.Issues
 }
@@ -95,7 +95,7 @@ func GetTimesheet(date string, showEntireWeek bool) []types.Timesheet {
 		Worklog []types.Timesheet `json:"worklog"`
 	})
 
-	getJSONResponse(http.MethodGet, url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse.Worklog
 }
@@ -105,7 +105,7 @@ func GetValidProjectsAndIssueType() types.IssueCreateMeta {
 
 	jsonResponse := &types.IssueCreateMeta{}
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return *jsonResponse
 }
@@ -115,7 +115,7 @@ func GetPriorities() []types.Priority {
 
 	jsonResponse := &[]types.Priority{}
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return *jsonResponse
 }
@@ -125,7 +125,7 @@ func GetIssueTypes() *[]types.IssueType {
 
 	jsonResponse := &[]types.IssueType{}
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse
 }
@@ -135,7 +135,7 @@ func GetIssue(key string) types.IssueDescription {
 
 	jsonResponse := &types.IssueDescription{}
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return *jsonResponse
 }
@@ -147,7 +147,7 @@ func GetIssuesInEpic(key string) []types.Issue {
 		Issues []types.Issue `json:"issues"`
 	})
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse.Issues
 }
@@ -159,7 +159,7 @@ func GetTransistions(key string) []types.Transition {
 		Transitions []types.Transition `json:"transitions"`
 	})
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse.Transitions
 }
@@ -171,7 +171,7 @@ func GetComments(key string) []types.Comment {
 		Comments []types.Comment `json:"comments"`
 	})
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse.Comments
 }
@@ -183,7 +183,7 @@ func GetWorklogs(key string) []types.Worklog {
 		Worklogs []types.Worklog `json:"worklogs"`
 	})
 
-	getJSONResponse("GET", url, nil, jsonResponse)
+	query(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse.Worklogs
 }
@@ -195,7 +195,7 @@ func GetRapidViewID(board string) *types.RapidView {
 		Views []types.RapidView `json:"views"`
 	})
 
-	getJSONResponse(http.MethodGet, url, nil, resp)
+	query(http.MethodGet, url, nil, resp)
 
 	for _, x := range resp.Views {
 		if strings.EqualFold(board, x.Name) {
@@ -216,7 +216,7 @@ func GetSprints(rapidViewID int) ([]types.Sprint, []types.SprintIssue) {
 		Sprints []types.Sprint      `json:"sprints"`
 	})
 
-	getJSONResponse(http.MethodGet, url, nil, resp)
+	query(http.MethodGet, url, nil, resp)
 
 	return resp.Sprints, resp.Issues
 }
@@ -224,7 +224,7 @@ func GetSprints(rapidViewID int) ([]types.Sprint, []types.SprintIssue) {
 func IssueExists(issueKey *string) bool {
 	url := server + "/rest/api/2/issue/" + *issueKey
 	ctx := context.Background()
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.SetBasicAuth(username, password)
 
@@ -266,7 +266,7 @@ func UpdateStatus(key string, transitions []types.Transition) error {
 		}
 	}`)
 
-	resp, err := update("POST", url, payload)
+	resp, err := update(http.MethodPost, url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
 
@@ -280,7 +280,7 @@ func UpdateAssignee(key string, user string) error {
 	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
 	payload := []byte(`{"name":"` + user + `"}`)
 
-	resp, err := update("PUT", url, payload)
+	resp, err := update(http.MethodPut, url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
 
@@ -293,7 +293,7 @@ func UpdateAssignee(key string, user string) error {
 func CreateNewIssue(project types.Project, issueTypeID,
 	priorityID, summary, description string) (string, error) {
 	url := server + "/rest/api/2/issue"
-	method := "POST"
+	method := http.MethodPost
 
 	payload := []byte(`{
 		"fields":{
@@ -347,7 +347,7 @@ func AddWorklog(wDate, wTime, key, seconds, comment string) error {
 		"timeSpentSeconds": ` + seconds +
 		`}`)
 
-	resp, err := update("POST", url, payload)
+	resp, err := update(http.MethodPost, url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
 
@@ -370,7 +370,7 @@ func AddComment(key string, comment []byte) error {
 		}
 	}`)
 
-	resp, err := update("POST", url, payload)
+	resp, err := update(http.MethodPost, url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
 
@@ -387,7 +387,7 @@ func UpdateDescription(key string, desc []byte) error {
 
 	payload := []byte(`{"fields":{"description":"` + jsonDesc + `"}}`)
 
-	resp, err := update("PUT", url, payload)
+	resp, err := update(http.MethodPut, url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
 
@@ -410,7 +410,7 @@ func UpdateComment(key string, comment []byte, id string) error {
 		}
 	}`)
 
-	resp, err := update("PUT", url, payload)
+	resp, err := update(http.MethodPut, url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
 
@@ -436,7 +436,7 @@ func UpdateWorklog(worklog types.SimplifiedTimesheet) error {
 		"timeSpentSeconds": ` + strconv.Itoa(worklog.TimeSpent) +
 		`}`)
 
-	resp, err := update("PUT", url, payload)
+	resp, err := update(http.MethodPut, url, payload)
 	if err != nil {
 		fmt.Printf("%s\n", resp)
 
@@ -489,7 +489,7 @@ func update(method, url string, payload []byte) ([]byte, error) {
 
 	return body, nil
 }
-func getJSONResponse(method string, url string, payload []byte, jsonResponse interface{}) {
+func query(method string, url string, payload []byte, jsonResponse interface{}) {
 	// Create request
 	ctx := context.Background()
 	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
