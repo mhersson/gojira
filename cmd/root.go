@@ -35,16 +35,16 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+
+	"gitlab.com/mhersson/gojira/pkg/types"
 )
 
-// Variables inserted at build time from the Makefile
-// Used by the version checking.
+// GojiraVersion GojiraGitRevision and GojiraRepository
+// are all inserted at build time from the Makefile.
 var GojiraVersion string
 var GojiraGitRevision string
 var GojiraRepository string
 
-var color = Color{"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m",
-	"\033[1m", "\033[4m", "\033[0m"}
 var issueKey string
 var workDate string    // Used by `add work` to specify date
 var workTime string    // Used by `add work` to specify at what time the work was done
@@ -57,38 +57,7 @@ var issueTypeFile = path.Join(cacheFolder, "issuetype")
 var boardFile = path.Join(cacheFolder, "board")
 var versionFlag bool
 
-// Color type.
-type Color struct {
-	red     string
-	green   string
-	yellow  string
-	blue    string
-	magenta string
-	cyan    string
-	bold    string
-	ul      string
-	nocolor string
-}
-
-// var cfgFile string.
-type Config struct {
-	JiraURL            string `yaml:"JiraURL"` //nolint:tagliatelle
-	Username           string `yaml:"username"`
-	Password           string `yaml:"password"`
-	PasswordType       string `yaml:"passwordtype"`
-	UseTimesheetPlugin bool   `yaml:"useTimesheetPlugin"`
-	CheckForUpdates    bool   `yaml:"checkForUpdates"`
-}
-
-type Error struct {
-	Message string
-}
-
-func (e *Error) Error() string {
-	return e.Message
-}
-
-var config Config
+var config types.Config
 
 var rootCmdLong = `The Gojira JIRA client
 
@@ -194,7 +163,7 @@ func getHomeFolder() string {
 	return home
 }
 
-func getPassword(config *Config) error {
+func getPassword(config *types.Config) error {
 	switch config.PasswordType {
 	case "pass":
 		pw, err := runPass([]string{config.Password})

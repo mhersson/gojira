@@ -29,6 +29,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/mhersson/gojira/pkg/jira"
+	"gitlab.com/mhersson/gojira/pkg/util"
 )
 
 const setActiveUsage string = `
@@ -65,7 +67,7 @@ var setActiveCmd = &cobra.Command{
 		case "issue":
 			issueKey = strings.ToUpper(args[1])
 			setActiveIssue(issueKey)
-			key := getActiveIssue()
+			key := util.GetActiveIssue(issueFile)
 			fmt.Printf("Issue %s is active\n", key)
 		case "board":
 			board := strings.ToLower(args[1])
@@ -87,7 +89,7 @@ func init() {
 }
 
 func setActiveIssue(key string) {
-	issues := getIssues("key = " + key)
+	issues := jira.GetIssues(config, "key = "+key)
 	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist, and can not be set active\n", key)
 		os.Exit(1)
@@ -110,7 +112,7 @@ func setActiveIssue(key string) {
 }
 
 func setActiveBoard(board string) {
-	if id := getRapidViewID(board); id == nil {
+	if id := jira.GetRapidViewID(config, board); id == nil {
 		fmt.Printf("Board %s does not exist, and can not be set active\n", board)
 		os.Exit(1)
 	}

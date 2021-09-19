@@ -34,6 +34,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/mhersson/gojira/pkg/jira"
+	"gitlab.com/mhersson/gojira/pkg/types"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const updateStatusUsage string = `By default the active issue gets updated,
@@ -83,10 +86,10 @@ var updateStatusCmd = &cobra.Command{
 		if len(args) == 1 {
 			issueKey = strings.ToUpper(args[0])
 		}
-		validateIssueKey(&issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
 		status := getStatus(issueKey)
 		printStatus(status, false)
-		tr := getTransistions(issueKey)
+		tr := jira.GetTransistions(config, issueKey)
 		printTransitions(tr)
 		if len(tr) >= 1 {
 			err := updateStatus(issueKey, tr)
@@ -109,7 +112,7 @@ var updateAssigneeCmd = &cobra.Command{
 		if len(args) == 1 {
 			issueKey = strings.ToUpper(args[0])
 		}
-		validateIssueKey(&issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
 
 		if assignee == "" {
 			assignee = config.Username
@@ -174,7 +177,7 @@ func getUserInput(prompt string, regRange string) string {
 	return answer
 }
 
-func updateStatus(key string, transitions []Transition) error {
+func updateStatus(key string, transitions []types.Transition) error {
 	r := fmt.Sprintf("^([0-%d])$", len(transitions)-1)
 	index := getUserInput("", r)
 
@@ -242,7 +245,7 @@ func update(method, url string, payload []byte) ([]byte, error) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
-		return body, &Error{resp.Status}
+		return body, &types.Error{Message: resp.Status}
 	}
 
 	return body, nil

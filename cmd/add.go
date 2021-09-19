@@ -25,12 +25,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/mhersson/gojira/pkg/util/convert"
+	"gitlab.com/mhersson/gojira/pkg/util/format"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const addCommentUsage string = `This command will add a new comment to an issue.
@@ -111,18 +112,18 @@ var addWorkCmd = &cobra.Command{
 			work = args[1]
 		}
 
-		validateIssueKey(&issueKey)
-		if workDate != "" && !validateDate(workDate) {
+		validate.IssueKey(config, &issueKey, issueFile)
+		if workDate != "" && !validate.Date(workDate) {
 			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd")
 			os.Exit(1)
 		}
 
-		if workTime != "" && !validateTime(workTime) {
+		if workTime != "" && !validate.Time(workTime) {
 			fmt.Println("Invalid time. Tate must be on the format hh:mm")
 			os.Exit(1)
 		}
 
-		duration, err := convertDurationStringToSeconds(work)
+		duration, err := convert.DurationStringToSeconds(work)
 		if err != nil {
 			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
@@ -134,7 +135,7 @@ var addWorkCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("%sSuccessfully added new worklog.%s\n", color.green, color.nocolor)
+		fmt.Printf("%sSuccessfully added new worklog.%s\n", format.Color.Green, format.Color.Nocolor)
 	},
 }
 
@@ -148,7 +149,7 @@ var addCommentCmd = &cobra.Command{
 			issueKey = strings.ToUpper(args[0])
 		}
 
-		validateIssueKey(&issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
 
 		comment, err := captureInputFromEditor("", "comment*")
 		if err != nil {
@@ -182,38 +183,6 @@ func init() {
 		"comment", "c", "", "add a comment to you worklog")
 }
 
-func convertDurationStringToSeconds(args string) (string, error) {
-	// Format 0.5h OR 30m alone or 1h 30m combined
-	re := regexp.MustCompile(`((([0-9.]{1,})(h))?\s?(([0-6]?[0-9])(m))?)`)
-	m := re.FindStringSubmatch(args)
-
-	var seconds float64
-
-	if m != nil {
-		if m[3] != "" {
-			num, err := strconv.ParseFloat(m[3], 64)
-			if err != nil {
-				return "", fmt.Errorf("%w", err)
-			}
-
-			seconds += num * 3600
-		}
-
-		if m[6] != "" {
-			num, err := strconv.ParseFloat(m[6], 64)
-			if err != nil {
-				return "", fmt.Errorf("%w", err)
-			}
-
-			seconds += num * 60
-		}
-
-		return strconv.FormatFloat(seconds, 'f', 0, 64), nil
-	}
-
-	return "", &Error{"invalid duration format"}
-}
-
 func setWorkStarttime() string {
 	now := time.Now()
 	zone, _ := now.Zone()
@@ -233,18 +202,6 @@ func setWorkStarttime() string {
 	t, _ := time.Parse("2006-01-02 15:04 MST", fmt.Sprintf("%s %s %s", workDate, workTime, zone))
 
 	return t.UTC().Format("2006-01-02T15:04:05.000+0000")
-}
-
-func validateDate(date string) bool {
-	re := regexp.MustCompile("202[0-9]-((0[1-9])|(1[0-2]))-((0[1-9])|([1-2][0-9])|(3[0-1]))")
-
-	return re.MatchString(date)
-}
-
-func validateTime(time string) bool {
-	re := regexp.MustCompile("([0-1][0-9]|2[0-3]):[0-5][0-9]")
-
-	return re.MatchString(time)
 }
 
 func addWork(key string, seconds string, comment string) error {

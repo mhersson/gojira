@@ -31,6 +31,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"gitlab.com/mhersson/gojira/pkg/jira"
+	"gitlab.com/mhersson/gojira/pkg/types"
+	"gitlab.com/mhersson/gojira/pkg/util/format"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 // createCmd represents the create command.
@@ -51,8 +56,8 @@ by the user, and only then will the request be sent to JIRA.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		key := strings.ToUpper(args[0])
-		validProjects := getValidProjectsAndIssueType()
-		project := validateProjectKey(key, validProjects)
+		validProjects := jira.GetValidProjectsAndIssueType(config)
+		project := validate.ProjectKey(key, validProjects)
 		if project.ID == "" {
 			fmt.Printf("%s is not a valid project key\n", key)
 			os.Exit(1)
@@ -72,7 +77,7 @@ by the user, and only then will the request be sent to JIRA.`,
 			os.Exit(1)
 		}
 
-		fmt.Printf("%sNew issue has got key %s%s\n", color.blue, newKey, color.nocolor)
+		fmt.Printf("%sNew issue has got key %s%s\n", format.Color.Blue, newKey, format.Color.Nocolor)
 
 		ans := getUserInput("Do you want to set the new issue active [y/N]: ", "[y|n]")
 		if ans == "y" {
@@ -80,7 +85,7 @@ by the user, and only then will the request be sent to JIRA.`,
 		}
 
 		fmt.Printf("\n%sSuccessfully created new issue - run describe to see the details%s\n\n",
-			color.green, color.nocolor)
+			format.Color.Green, format.Color.Nocolor)
 		// printIssue(getIssue(newKey), IssueDescriptionResponse{})
 
 	},
@@ -90,50 +95,8 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 }
 
-func getValidProjectsAndIssueType() IssueCreateMeta {
-	url := config.JiraURL + "/rest/api/2/issue/createmeta"
-
-	jsonResponse := &IssueCreateMeta{}
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return *jsonResponse
-}
-
-func validateProjectKey(key string, projects IssueCreateMeta) Project {
-	// This validates the project key not the issue key
-	// hvis is the project key + a number
-	for _, v := range projects.Projects {
-		if key == strings.ToUpper(v.Key) {
-			return v
-		}
-	}
-
-	return Project{}
-}
-
-func getPriorities() []Priority {
-	url := config.JiraURL + "/rest/api/2/priority"
-
-	jsonResponse := &[]Priority{}
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return *jsonResponse
-}
-
-func getIssueTypes() *[]IssueType {
-	url := config.JiraURL + "/rest/api/2/issuetype"
-
-	jsonResponse := &[]IssueType{}
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return jsonResponse
-}
-
 func getUserInputPriority() (string, string) {
-	priorities := getPriorities()
+	priorities := jira.GetPriorities(config)
 
 	fmt.Println("Choose issue priority:")
 
@@ -155,7 +118,7 @@ func getUserInputPriority() (string, string) {
 	return "", ""
 }
 
-func getUserInputIssueType(project Project) (string, string) {
+func getUserInputIssueType(project types.Project) (string, string) {
 	fmt.Println("Choose issue type:")
 
 	for i, v := range project.IssueTypes {
@@ -217,8 +180,8 @@ func getUserInputDescription() (string, string) {
 	return escaped, string(desc)
 }
 
-func getUserInputConfirmOk(project Project, issueType, pri, summary, description string) bool {
-	fmt.Printf("%sPlease check you input:%s\n", color.blue, color.nocolor)
+func getUserInputConfirmOk(project types.Project, issueType, pri, summary, description string) bool {
+	fmt.Printf("%sPlease check you input:%s\n", format.Color.Blue, format.Color.Nocolor)
 	fmt.Printf("Project %s, Type: %s, Priority: %s\n", project.Key, issueType, pri)
 	fmt.Printf("Summary: %s\n", summary)
 	fmt.Printf("Description:\n%s\n", description)
@@ -233,7 +196,7 @@ func getUserInputConfirmOk(project Project, issueType, pri, summary, description
 	return false
 }
 
-func createNewIssue(project Project, issueTypeID,
+func createNewIssue(project types.Project, issueTypeID,
 	priorityID, summary, description string) (string, error) {
 	url := config.JiraURL + "/rest/api/2/issue"
 	method := "POST"

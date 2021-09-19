@@ -19,7 +19,38 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package cmd
+package types
+
+// var cfgFile string.
+type Config struct {
+	JiraURL            string `yaml:"JiraURL"` //nolint:tagliatelle
+	Username           string `yaml:"username"`
+	Password           string `yaml:"password"`
+	PasswordType       string `yaml:"passwordtype"`
+	UseTimesheetPlugin bool   `yaml:"useTimesheetPlugin"`
+	CheckForUpdates    bool   `yaml:"checkForUpdates"`
+}
+
+type Error struct {
+	Message string
+}
+
+func (e *Error) Error() string {
+	return e.Message
+}
+
+// Color type.
+type Color struct {
+	Red     string
+	Green   string
+	Yellow  string
+	Blue    string
+	Magenta string
+	Cyan    string
+	Bold    string
+	Ul      string
+	Nocolor string
+}
 
 type IssueDescription struct {
 	ID     string `json:"id"`
@@ -221,7 +252,7 @@ type Timesheet struct {
 }
 
 // Used by worklog command to be able to
-// sort and edit worklogs
+// sort and edit worklogs.
 type SimplifiedTimesheet struct {
 	ID        int
 	Date      string

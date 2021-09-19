@@ -28,6 +28,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"gitlab.com/mhersson/gojira/pkg/types"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const openUsage string = `This command will open the issue in your default browser
@@ -52,7 +55,7 @@ var openCmd = &cobra.Command{
 		if len(args) == 1 {
 			issueKey = strings.ToUpper(args[0])
 		}
-		validateIssueKey(&issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
 		openbrowser(config.JiraURL + "/browse/" + issueKey)
 	},
 }
@@ -73,7 +76,7 @@ func openbrowser(url string) {
 	case "darwin":
 		err = exec.Command("open", url).Start()
 	default:
-		err = &Error{"unsupported platform"}
+		err = &types.Error{Message: "unsupported platform"}
 	}
 
 	if err != nil {

@@ -22,20 +22,18 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
 	"os"
-	"regexp"
-	"sort"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
+
+	"gitlab.com/mhersson/gojira/pkg/jira"
+	"gitlab.com/mhersson/gojira/pkg/types"
+	"gitlab.com/mhersson/gojira/pkg/util"
+	"gitlab.com/mhersson/gojira/pkg/util/convert"
+	"gitlab.com/mhersson/gojira/pkg/util/format"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 // Used by get myworklog.
@@ -139,7 +137,7 @@ var getAllIssuesCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"l"},
 	Run: func(cmd *cobra.Command, args []string) {
-		myIssues := getIssues(jqlFilter)
+		myIssues := jira.GetIssues(config, jqlFilter)
 		printIssues(myIssues, true)
 	},
 }
@@ -150,7 +148,7 @@ var getActiveCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"a"},
 	Run: func(cmd *cobra.Command, args []string) {
-		key := getActiveIssue()
+		key := util.GetActiveIssue(issueFile)
 		summary := getSummary(key)
 		fmt.Printf("Active Issue: %s %s\n", key, summary)
 	},
@@ -162,7 +160,7 @@ var getActiveBoardCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"b"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Active Board: %s\n", getActiveBoard())
+		fmt.Printf("Active Board: %s\n", util.GetActiveBoard(boardFile))
 	},
 }
 
@@ -172,7 +170,7 @@ var getStatusCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"s"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validateIssueKey(&issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
 		status := getStatus(issueKey)
 		printStatus(status, false)
 	},
@@ -184,10 +182,10 @@ var getTransistionsCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"t"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validateIssueKey(&issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
 		status := getStatus(issueKey)
 		printStatus(status, false)
-		tr := getTransistions(issueKey)
+		tr := jira.GetTransistions(config, issueKey)
 		printTransitions(tr)
 	},
 }
@@ -201,8 +199,8 @@ var getCommentsCmd = &cobra.Command{
 		if len(args) == 1 {
 			issueKey = strings.ToUpper(args[0])
 		}
-		validateIssueKey(&issueKey)
-		comments := getComments(issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
+		comments := jira.GetComments(config, issueKey)
 		printComments(comments, 0)
 	},
 }
@@ -216,8 +214,8 @@ var getWorklogCmd = &cobra.Command{
 		if len(args) == 1 {
 			issueKey = strings.ToUpper(args[0])
 		}
-		validateIssueKey(&issueKey)
-		worklogs := getWorklogs(issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
+		worklogs := jira.GetWorklogs(config, issueKey)
 		printWorklogs(issueKey, worklogs)
 	},
 }
@@ -227,25 +225,25 @@ var getMyWorklogCmd = &cobra.Command{
 	Short: "Display your worklog for a given date",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		date := getCurrentDate()
+		date := util.GetCurrentDate()
 		if len(args) == 1 {
 			date = args[0]
 		}
-		if validateDate(date) {
+		if validate.Date(date) {
 			if config.UseTimesheetPlugin {
-				worklogs := getTimesheet(date)
+				worklogs := jira.GetTimesheet(config, date, showEntireWeek)
 
-				if len(worklogs) == 0 && dateIsToday(date) {
+				if len(worklogs) == 0 && util.DateIsToday(date) {
 					fmt.Println("You havn't logged any hours today.")
 					os.Exit(0)
 				}
 
 				printTimesheet(worklogs)
 			} else {
-				issues := getIssues("worklogDate = " + date +
+				issues := jira.GetIssues(config, "worklogDate = "+date+
 					" AND worklogAuthor = currentUser()")
 
-				if len(issues) == 0 && dateIsToday(date) {
+				if len(issues) == 0 && util.DateIsToday(date) {
 					fmt.Println("You havn't logged any hours today.")
 					os.Exit(0)
 				}
@@ -266,16 +264,16 @@ var getSprintCMD = &cobra.Command{
 		if len(args) >= 1 {
 			board = args[0]
 		} else {
-			board = getActiveBoard()
+			board = util.GetActiveBoard(boardFile)
 		}
-		rapidView := getRapidViewID(board)
+		rapidView := jira.GetRapidViewID(config, board)
 		if rapidView != nil && rapidView.SprintSupportEnabled {
-			issueTypes := getIssueTypes()
-			priorities := getPriorities()
-			sprints, issues := getSprints(rapidView.ID)
+			issueTypes := jira.GetIssueTypes(config)
+			priorities := jira.GetPriorities(config)
+			sprints, issues := jira.GetSprints(config, rapidView.ID)
 			for _, sprint := range getActiveOrLatestSprint(sprints) {
 
-				fmt.Println(formatSprintHeader(*sprint))
+				fmt.Println(format.SprintHeader(*sprint))
 
 				printSprintIssues(sprint, issues, *issueTypes, priorities)
 			}
@@ -310,142 +308,8 @@ func init() {
 	getSprintCMD.SetUsageTemplate(getSprintUsage)
 }
 
-func issueExists(issueKey *string) bool {
-	url := config.JiraURL + "/rest/api/2/issue/" + *issueKey
-	ctx := context.Background()
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(config.Username, config.Password)
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
-	return resp.StatusCode == 200
-}
-
-func validateIssueKey(key *string) {
-	if *key != "" {
-		re := regexp.MustCompile("[A-Z]{2,9}-[0-9]{1,4}")
-
-		m := re.MatchString(*key)
-		if !m {
-			fmt.Println("Invalid key")
-			os.Exit(1)
-		}
-
-		if !issueExists(key) {
-			fmt.Printf("%s does not exist\n", *key)
-			os.Exit(1)
-		}
-	} else {
-		*key = getActiveIssue()
-	}
-}
-
-func getActiveIssue() string {
-	if _, err := os.Stat(issueFile); os.IsNotExist(err) {
-		fmt.Println("Active issue is not set")
-		os.Exit(1)
-	}
-
-	out, err := ioutil.ReadFile(issueFile)
-	if err != nil {
-		fmt.Println("Failed to get active issue")
-		os.Exit(1)
-	}
-
-	return string(out)
-}
-
-func getActiveBoard() string {
-	if _, err := os.Stat(boardFile); os.IsNotExist(err) {
-		fmt.Println("Active board is not set")
-		os.Exit(0)
-	}
-
-	out, err := ioutil.ReadFile(boardFile)
-	if err != nil {
-		fmt.Println("Failed to get active board")
-		os.Exit(1)
-	}
-
-	return string(out)
-}
-
-func getIssues(filter string) []Issue {
-	url := config.JiraURL + "/rest/api/2/search"
-
-	if filter == "" {
-		filter = `assignee = ` + config.Username +
-			` AND resolution = Unresolved order by priority, updated`
-	} else {
-		filter += " order by priority, updated"
-	}
-
-	payload := []byte(`{"jql": "` + filter + `",
-		"startAt":0,
-		"maxResults":50,
-		"fields":[
-		"summary",
-		"status",
-		"updated",
-		"assignee",
-		"issuetype",
-		"priority"]
-	}`)
-
-	jsonResponse := new(struct {
-		Issues []Issue `json:"issues"`
-	})
-
-	getJSONResponse("POST", url, payload, jsonResponse)
-
-	return jsonResponse.Issues
-}
-
-func getTimesheet(date string) []Timesheet {
-	url := config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date + "&endDate=" + date
-
-	if showEntireWeek {
-		// Date is already validated, so should be safe
-		// to drop the error check here
-		t, _ := time.Parse("2006-01-02", date)
-		start, end := weekStartEndDate(t.ISOWeek())
-		url = config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
-	}
-
-	jsonResponse := new(struct {
-		Worklog []Timesheet `json:"worklog"`
-	})
-
-	getJSONResponse(http.MethodGet, url, nil, jsonResponse)
-
-	return jsonResponse.Worklog
-}
-
-func weekStartEndDate(year, week int) (string, string) {
-	t := time.Date(year, 7, 1, 0, 0, 0, 0, time.UTC)
-
-	if wd := t.Weekday(); wd == time.Sunday {
-		t = t.AddDate(0, 0, -6)
-	} else {
-		t = t.AddDate(0, 0, -int(wd)+1)
-	}
-
-	_, w := t.ISOWeek()
-	t = t.AddDate(0, 0, (week-w)*7)
-	e := t.AddDate(0, 0, 6)
-
-	return t.Format("2006-01-02"), e.Format("2006-01-02")
-}
-
 func getStatus(key string) string {
-	jsonResponse := getIssues("key = " + key)
+	jsonResponse := jira.GetIssues(config, "key = "+key)
 	if len(jsonResponse) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
@@ -455,7 +319,7 @@ func getStatus(key string) string {
 }
 
 func getSummary(key string) string {
-	issues := getIssues("key = " + key)
+	issues := jira.GetIssues(config, "key = "+key)
 	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
@@ -464,93 +328,8 @@ func getSummary(key string) string {
 	return issues[0].Fields.Summary
 }
 
-func getTransistions(key string) []Transition {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
-
-	jsonResponse := new(struct {
-		Transitions []Transition `json:"transitions"`
-	})
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return jsonResponse.Transitions
-}
-
-func getComments(key string) []Comment {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
-
-	jsonResponse := new(struct {
-		Comments []Comment `json:"comments"`
-	})
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return jsonResponse.Comments
-}
-
-func getComment(key, commentID string) Comment {
-	comments := getComments(key)
-
-	if commentID == "" && len(comments) >= 1 {
-		return comments[len(comments)-1]
-	}
-
-	for _, c := range comments {
-		if c.ID == commentID {
-			return c
-		}
-	}
-
-	return Comment{}
-}
-
-func getWorklogs(key string) []Worklog {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
-
-	jsonResponse := new(struct {
-		Worklogs []Worklog `json:"worklogs"`
-	})
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return jsonResponse.Worklogs
-}
-
-func getRapidViewID(board string) *RapidView {
-	url := config.JiraURL + "/rest/greenhopper/1.0/rapidview"
-
-	resp := new(struct {
-		Views []RapidView `json:"views"`
-	})
-
-	getJSONResponse(http.MethodGet, url, nil, resp)
-
-	for _, x := range resp.Views {
-		if strings.EqualFold(board, x.Name) {
-			return &x
-		}
-	}
-
-	return nil
-}
-
-func getSprints(rapidViewID int) ([]Sprint, []SprintIssue) {
-	url := fmt.Sprintf(
-		"%s/rest/greenhopper/1.0/xboard/plan/backlog/data.json?rapidViewId=%d",
-		config.JiraURL, rapidViewID)
-
-	resp := new(struct {
-		Issues  []SprintIssue `json:"issues"`
-		Sprints []Sprint      `json:"sprints"`
-	})
-
-	getJSONResponse(http.MethodGet, url, nil, resp)
-
-	return resp.Sprints, resp.Issues
-}
-
-func getActiveOrLatestSprint(sprints []Sprint) []*Sprint {
-	active := []*Sprint{}
+func getActiveOrLatestSprint(sprints []types.Sprint) []*types.Sprint {
+	active := []*types.Sprint{}
 
 	for x := range sprints {
 		if sprints[x].State == "ACTIVE" {
@@ -572,18 +351,18 @@ func getActiveOrLatestSprint(sprints []Sprint) []*Sprint {
 	return active
 }
 
-func getUserTimeOnIssueAtDate(user, date string, issues []Issue) []TimeSpentUserIssue {
-	userIssues := []TimeSpentUserIssue{}
+func getUserTimeOnIssueAtDate(user, date string, issues []types.Issue) []types.TimeSpentUserIssue {
+	userIssues := []types.TimeSpentUserIssue{}
 
 	for _, v := range issues {
 		t := getTimeSpentOnIssue(user, date, v.Key)
 
-		i := &TimeSpentUserIssue{}
+		i := &types.TimeSpentUserIssue{}
 		i.ID = v.ID
 		i.Key = v.Key
 		i.Date = date
 		i.Summary = v.Fields.Summary
-		i.TimeSpent = convertSecondsToHoursAndMinutes(t, false)
+		i.TimeSpent = convert.SecondsToHoursAndMinutes(t, false)
 		i.TimeSpentSeconds = t
 		userIssues = append(userIssues, *i)
 	}
@@ -595,7 +374,7 @@ func getTimeSpentOnIssue(user, date string, key string) int {
 	// Returns the number of hours and minutes a user
 	// has logged on an issue on the given date as total
 	// number of seconds
-	wl := getWorklogs(key)
+	wl := jira.GetWorklogs(config, key)
 
 	timeSpent := 0
 
@@ -608,28 +387,7 @@ func getTimeSpentOnIssue(user, date string, key string) int {
 	return timeSpent
 }
 
-func convertSecondsToHoursAndMinutes(seconds int, dropMinutes bool) string {
-	hours := seconds / 3600
-	minutes := (seconds % 3600) / 60
-
-	if dropMinutes {
-		return fmt.Sprintf("%dh", hours)
-	}
-
-	if minutes < 10 {
-		return fmt.Sprintf("%dh 0%dm", hours, minutes)
-	}
-
-	return fmt.Sprintf("%dh %dm", hours, minutes)
-}
-
-func getCurrentDate() string {
-	now := time.Now().UTC()
-	// jira date format - "2017-12-07"
-	return now.Format("2006-01-02")
-}
-
-func getIssueTypeNameByID(issueTypes []IssueType, id string) string {
+func getIssueTypeNameByID(issueTypes []types.IssueType, id string) string {
 	for _, x := range issueTypes {
 		if x.ID == id {
 			return x.Name
@@ -639,7 +397,7 @@ func getIssueTypeNameByID(issueTypes []IssueType, id string) string {
 	return "Unknown"
 }
 
-func getPriorityNameByID(priorities []Priority, id string) string {
+func getPriorityNameByID(priorities []types.Priority, id string) string {
 	for _, x := range priorities {
 		if x.ID == id {
 			return x.Name
@@ -649,68 +407,10 @@ func getPriorityNameByID(priorities []Priority, id string) string {
 	return "Unknown"
 }
 
-func getWorklogsSorted(worklogs []Timesheet, truncate bool) []SimplifiedTimesheet {
-	week := []SimplifiedTimesheet{}
-
-	for _, wl := range worklogs {
-		if len(wl.Summary) > 40 && truncate {
-			wl.Summary = wl.Summary[:40] + ".."
-		}
-
-		for _, entry := range wl.Entries {
-			if len(entry.Comment) > 31 && truncate {
-				entry.Comment = entry.Comment[:31] + ".."
-			}
-
-			date := time.Unix(0, int64(entry.StartDate*int(time.Millisecond))).Format("2006-01-02")
-			startdate := time.Unix(0, int64(entry.StartDate*int(time.Millisecond))).Format("2006-01-02 15:04")
-			ts := SimplifiedTimesheet{entry.ID, date, startdate, wl.Key, wl.Summary, entry.Comment, entry.TimeSpent}
-			week = append(week, ts)
-		}
-	}
-
-	sort.Slice(week, func(i, j int) bool {
-		return week[i].Date < week[j].Date
-	})
-
-	return week
-}
-
-func getJSONResponse(method string, url string, payload []byte, jsonResponse interface{}) {
-	// Create request
-	ctx := context.Background()
-	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(config.Username, config.Password)
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// fmt.Println(string(body))
-
-	err = json.Unmarshal(body, jsonResponse)
-	if err != nil {
-		log.Fatalf("Failed to parse json response: %s\n", err)
-	}
-
-	defer resp.Body.Close()
-}
-
-func printIssues(jsonResponse []Issue, header bool) {
+func printIssues(jsonResponse []types.Issue, header bool) {
 	if header {
-		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", color.ul, color.yellow,
-			"Key", "Type", "Priority", "Summary", "Status", "Assignee", color.nocolor)
+		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", format.Color.Ul, format.Color.Yellow,
+			"Key", "Type", "Priority", "Summary", "Status", "Assignee", format.Color.Nocolor)
 	}
 
 	for _, v := range jsonResponse {
@@ -720,10 +420,10 @@ func printIssues(jsonResponse []Issue, header bool) {
 
 		fmt.Printf("%-15s%s%s%-64s%s%s\n",
 			v.Key,
-			formatIssueType(v.Fields.IssueType.Name, true),
-			formatPriority(v.Fields.Priority.Name, true),
+			format.IssueType(v.Fields.IssueType.Name, true),
+			format.Priority(v.Fields.Priority.Name, true),
 			v.Fields.Summary,
-			formatStatus(v.Fields.Status.Name, false),
+			format.Status(v.Fields.Status.Name, false),
 			v.Fields.Assignee.DisplayName)
 	}
 }
@@ -731,36 +431,36 @@ func printIssues(jsonResponse []Issue, header bool) {
 func printStatus(status string, hasBeenUpdated bool) {
 	if hasBeenUpdated {
 		fmt.Printf("\n%s%sNew status:%s %s%s\n",
-			color.yellow, color.bold, color.green, status, color.nocolor)
+			format.Color.Yellow, format.Color.Bold, format.Color.Green, status, format.Color.Nocolor)
 	} else {
 		fmt.Printf("\n%s%sCurrent status:%s %s%s\n",
-			color.yellow, color.bold, color.green, status, color.nocolor)
+			format.Color.Yellow, format.Color.Bold, format.Color.Green, status, format.Color.Nocolor)
 	}
 }
 
-func printTransitions(transitions []Transition) {
+func printTransitions(transitions []types.Transition) {
 	fmt.Println("The following transitions are available:")
 
 	for i, v := range transitions {
-		fmt.Printf("%s%s%d.%s %s\n", color.bold, color.yellow, i, color.nocolor, v.Name)
+		fmt.Printf("%s%s%d.%s %s\n", format.Color.Bold, format.Color.Yellow, i, format.Color.Nocolor, v.Name)
 	}
 }
 
-func printComments(comments []Comment, maxNumber int) {
+func printComments(comments []types.Comment, maxNumber int) {
 	c := comments
 	if len(comments) >= maxNumber && maxNumber != 0 {
 		c = comments[len(comments)-maxNumber:]
 	}
 
 	for _, v := range c {
-		fmt.Printf("%sComment:    %s%-45sCreated: %s\n", color.yellow, color.nocolor, v.ID, v.Created[:16])
+		fmt.Printf("%sComment:    %s%-45sCreated: %s\n", format.Color.Yellow, format.Color.Nocolor, v.ID, v.Created[:16])
 		fmt.Printf("Visibility: %-45sAuthor: %s (%s)\n", v.Visibility.Value, v.Author.DisplayName, v.Author.Name)
 		fmt.Printf("\n%s", strings.ReplaceAll(v.Body, "{noformat}", "```"))
-		fmt.Println("\n" + color.ul + strings.Repeat(" ", 100) + color.nocolor)
+		fmt.Println("\n" + format.Color.Ul + strings.Repeat(" ", 100) + format.Color.Nocolor)
 	}
 }
 
-func printWorklogs(issueKey string, worklogs []Worklog) {
+func printWorklogs(issueKey string, worklogs []types.Worklog) {
 	totalTimeSpent := 0
 
 	for _, v := range worklogs {
@@ -768,8 +468,8 @@ func printWorklogs(issueKey string, worklogs []Worklog) {
 
 		fmt.Printf("%s %s%-30s%sTime Spent: %s%-8s%s%s\n",
 			v.Started[:16],
-			color.cyan, v.Author.DisplayName, color.nocolor,
-			color.yellow, v.TimeSpent, color.nocolor, v.Comment)
+			format.Color.Cyan, v.Author.DisplayName, format.Color.Nocolor,
+			format.Color.Yellow, v.TimeSpent, format.Color.Nocolor, v.Comment)
 	}
 
 	if totalTimeSpent == 0 {
@@ -780,23 +480,23 @@ func printWorklogs(issueKey string, worklogs []Worklog) {
 }
 
 func printTimeTracking(key string) {
-	issue := getIssue(key)
+	issue := jira.GetIssue(config, key)
 
-	colorRemaining := color.yellow
+	colorRemaining := format.Color.Yellow
 	if issue.Fields.TimeTracking.Remaining == "0h" && issue.Fields.TimeTracking.Estimate != "" {
-		colorRemaining = color.red
+		colorRemaining = format.Color.Red
 	}
 
 	fmt.Printf("%sTotal time spent:%s %-9s%sEstimated:%s %-9s%sRemaining:%s %s\n",
-		color.green, color.nocolor, formatTimeEstimate(issue.Fields.TimeTracking.TimeSpent),
-		color.blue, color.nocolor, issue.Fields.TimeTracking.Estimate,
-		colorRemaining, color.nocolor, issue.Fields.TimeTracking.Remaining)
+		format.Color.Green, format.Color.Nocolor, format.TimeEstimate(issue.Fields.TimeTracking.TimeSpent),
+		format.Color.Blue, format.Color.Nocolor, issue.Fields.TimeTracking.Estimate,
+		colorRemaining, format.Color.Nocolor, issue.Fields.TimeTracking.Remaining)
 }
 
-func printMyWorklog(ti []TimeSpentUserIssue) {
+func printMyWorklog(ti []types.TimeSpentUserIssue) {
 	if len(ti) >= 1 {
-		fmt.Printf("%s%s\n%-12s%-15s%-64s%s%s\n", color.ul, color.yellow,
-			"Date", "Key", "Summary", "Time Spent", color.nocolor)
+		fmt.Printf("%s%s\n%-12s%-15s%-64s%s%s\n", format.Color.Ul, format.Color.Yellow,
+			"Date", "Key", "Summary", "Time Spent", format.Color.Nocolor)
 
 		total := 0
 
@@ -810,65 +510,40 @@ func printMyWorklog(ti []TimeSpentUserIssue) {
 		}
 
 		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
-			strings.Repeat(" ", 73), color.ul, color.nocolor,
-			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
+			strings.Repeat(" ", 73), format.Color.Ul, format.Color.Nocolor,
+			convert.SecondsToHoursAndMinutes(total, false), format.Color.Nocolor)
 	} else {
 		fmt.Println("You have not logged any hours on this date")
 	}
 }
 
-func printTimesheet(worklogs []Timesheet) {
+func printTimesheet(worklogs []types.Timesheet) {
 	if len(worklogs) >= 1 {
-		week := getWorklogsSorted(worklogs, true)
+		week := util.GetWorklogsSorted(worklogs, true)
 
-		fmt.Printf("%s%s\n%-12s%-15s%-44s%-35s%s%s\n", color.ul, color.yellow,
-			"Date", "Key", "Summary", "Comment", "Time Spent", color.nocolor)
+		fmt.Printf("%s%s\n%-12s%-15s%-44s%-35s%s%s\n", format.Color.Ul, format.Color.Yellow,
+			"Date", "Key", "Summary", "Comment", "Time Spent", format.Color.Nocolor)
 
 		total := 0
 		for _, w := range week {
 			total += w.TimeSpent
 			fmt.Printf("%-12s%-15s%-44s%-35s%s\n",
-				w.Date, w.Key, w.Summary, w.Comment, convertSecondsToHoursAndMinutes(w.TimeSpent, false))
+				w.Date, w.Key, w.Summary, w.Comment, convert.SecondsToHoursAndMinutes(w.TimeSpent, false))
 		}
 
 		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
-			strings.Repeat(" ", 88), color.ul, color.nocolor,
-			convertSecondsToHoursAndMinutes(total, false), color.nocolor)
+			strings.Repeat(" ", 88), format.Color.Ul, format.Color.Nocolor,
+			convert.SecondsToHoursAndMinutes(total, false), format.Color.Nocolor)
 	} else {
 		fmt.Println("You have not logged any hours on this date")
 	}
 }
 
-func formatSprintHeader(sprint Sprint) string {
-	var statusColor string
-
-	switch sprint.State {
-	case "ACTIVE":
-		statusColor = color.green
-	case "CLOSED":
-		statusColor = color.red
-	default:
-		statusColor = color.blue
-	}
-
-	status := fmt.Sprintf("%s(%s%s%s)%s",
-		color.cyan, statusColor, sprint.State, color.cyan, color.nocolor)
-
-	return fmt.Sprintf("%s%s%70s %10s", color.bold, color.yellow, sprint.Name, status)
-}
-
-func formatSprintStatus(done bool) string {
-	if done {
-		return fmt.Sprintf("%sYes%s", color.green, color.nocolor)
-	}
-
-	return fmt.Sprintf("%sNo%s", color.blue, color.nocolor)
-}
-
-func printSprintIssues(sprint *Sprint, issues []SprintIssue, issueTypes []IssueType, priorites []Priority) {
+func printSprintIssues(
+	sprint *types.Sprint, issues []types.SprintIssue, issueTypes []types.IssueType, priorites []types.Priority) {
 	if len(issues) > 0 {
-		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-6s%-20s%s\n", color.ul, color.yellow,
-			"Key", "Type", "Priority", "Summary", "Est.", "Epic", "Done", "Assignee", color.nocolor)
+		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-6s%-20s%s\n", format.Color.Ul, format.Color.Yellow,
+			"Key", "Type", "Priority", "Summary", "Est.", "Epic", "Done", "Assignee", format.Color.Nocolor)
 
 		for _, i := range sprint.IssuesIDs {
 			for _, v := range issues {
@@ -879,12 +554,12 @@ func printSprintIssues(sprint *Sprint, issues []SprintIssue, issueTypes []IssueT
 
 					fmt.Printf("%-15s%s%s%-64s%-10s%-10s%-15s%-20s\n",
 						v.Key,
-						formatIssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
-						formatPriority(getPriorityNameByID(priorites, v.PriorityID), true),
+						format.IssueType(getIssueTypeNameByID(issueTypes, v.TypeID), true),
+						format.Priority(getPriorityNameByID(priorites, v.PriorityID), true),
 						v.Summary,
-						convertSecondsToHoursAndMinutes(int(v.EstimateStatistic.StatFieldValue.Value), true),
+						convert.SecondsToHoursAndMinutes(int(v.EstimateStatistic.StatFieldValue.Value), true),
 						v.Epic,
-						formatSprintStatus(v.Done),
+						format.SprintStatus(v.Done),
 						v.AssigneeName,
 					)
 
@@ -893,17 +568,4 @@ func printSprintIssues(sprint *Sprint, issues []SprintIssue, issueTypes []IssueT
 			}
 		}
 	}
-}
-
-func dateIsToday(date string) bool {
-	d, err := time.Parse("2006-01-02", date)
-	cobra.CheckErr(err)
-
-	t := time.Now()
-
-	if d.Year() == t.Year() && d.Month() == t.Month() && d.Day() == t.Day() {
-		return true
-	}
-
-	return false
 }

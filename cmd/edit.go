@@ -33,6 +33,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/mhersson/gojira/pkg/jira"
+	"gitlab.com/mhersson/gojira/pkg/types"
+	"gitlab.com/mhersson/gojira/pkg/util"
+	"gitlab.com/mhersson/gojira/pkg/util/convert"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 //go:embed templates/*.tmpl
@@ -85,8 +90,8 @@ var editDescrptionCmd = &cobra.Command{
 		if len(args) == 1 {
 			issueKey = strings.ToUpper(args[0])
 		}
-		validateIssueKey(&issueKey)
-		issue := getIssue(issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
+		issue := jira.GetIssue(config, issueKey)
 
 		desc, err := captureInputFromEditor(issue.Fields.Description, "description*")
 		if err != nil {
@@ -117,32 +122,32 @@ var editCommentCmd = &cobra.Command{
 		case 1:
 			// First argument can be both comment id for the active issue
 			// or another issue key, where the target comment is the latest
-			if validateCommentID(args[0]) {
+			if validate.CommentID(args[0]) {
 				// Comment id is valid, the issuekey will be set to the active issue
 				commentID = args[0]
-				validateIssueKey(&issueKey)
+				validate.IssueKey(config, &issueKey, issueFile)
 			} else {
 				// The argument is not a valid comment id, check if it
 				// is a valid issue key
 				issueKey = strings.ToUpper(args[0])
-				validateIssueKey(&issueKey)
+				validate.IssueKey(config, &issueKey, issueFile)
 			}
 
 		case 2:
 			// If two arguments are provided first must be the issueKey,
 			// and second must be the comment id
 			issueKey = strings.ToUpper(args[0])
-			validateIssueKey(&issueKey)
+			validate.IssueKey(config, &issueKey, issueFile)
 
 			commentID = args[1]
-			if !validateCommentID(commentID) {
+			if !validate.CommentID(commentID) {
 				fmt.Println("Invalid comment id")
 				os.Exit(1)
 			}
 
 		default:
 			// If no argument is provided edit the last comment of the current active issue
-			validateIssueKey(&issueKey)
+			validate.IssueKey(config, &issueKey, issueFile)
 		}
 
 		// Get the existing comment
@@ -181,18 +186,18 @@ var editMyWorklogCmd = &cobra.Command{
 	Short: "Edit your worklog for a given date",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		date := getCurrentDate()
+		date := util.GetCurrentDate()
 		if len(args) == 1 {
 			date = args[0]
 		}
 		if config.UseTimesheetPlugin {
-			if validateDate(date) {
-				ts := getTimesheet(date)
+			if validate.Date(date) {
+				ts := jira.GetTimesheet(config, date, showEntireWeek)
 				if len(ts) == 0 {
 					fmt.Println("There is nothing to edit.")
 					os.Exit(0)
 				}
-				worklogs := getWorklogsSorted(ts, false)
+				worklogs := util.GetWorklogsSorted(ts, false)
 				out := executeInternalTemplate("edit-worklog.tmpl", worklogs)
 				edited, err := captureInputFromEditor(string(out), "edit-worklog-*")
 				cobra.CheckErr(err)
@@ -257,10 +262,10 @@ func updateComment(key string, comment []byte, id string) error {
 	return nil
 }
 
-func updateWorklog(worklog SimplifiedTimesheet) error {
+func updateWorklog(worklog types.SimplifiedTimesheet) error {
 	dateAndTime := strings.Split(worklog.StartDate, " ")
 	if len(dateAndTime) != 2 {
-		return &Error{"invalid date and time"}
+		return &types.Error{Message: "invalid date and time"}
 	}
 
 	workDate = dateAndTime[0]
@@ -286,7 +291,7 @@ func updateWorklog(worklog SimplifiedTimesheet) error {
 	return nil
 }
 
-func updateChangedWorklogs(worklogs, editedWorklogs []SimplifiedTimesheet) {
+func updateChangedWorklogs(worklogs, editedWorklogs []types.SimplifiedTimesheet) {
 	success := 0
 
 	for _, e := range editedWorklogs {
@@ -310,7 +315,7 @@ func updateChangedWorklogs(worklogs, editedWorklogs []SimplifiedTimesheet) {
 	}
 }
 
-func addNewWorklogs(editedWorklogs []SimplifiedTimesheet) {
+func addNewWorklogs(editedWorklogs []types.SimplifiedTimesheet) {
 	success := 0
 
 	for _, e := range editedWorklogs {
@@ -338,12 +343,20 @@ func addNewWorklogs(editedWorklogs []SimplifiedTimesheet) {
 	}
 }
 
-func validateCommentID(commentID string) bool {
-	// This maybe wrong, but so far I have not
-	// seen an id which is not 6 digits long
-	re := regexp.MustCompile("^[0-9]{6}$")
+func getComment(key, commentID string) types.Comment {
+	comments := jira.GetComments(config, key)
 
-	return re.MatchString(commentID)
+	if commentID == "" && len(comments) >= 1 {
+		return comments[len(comments)-1]
+	}
+
+	for _, c := range comments {
+		if c.ID == commentID {
+			return c
+		}
+	}
+
+	return types.Comment{}
 }
 
 func executeInternalTemplate(filename string, content interface{}) []byte {
@@ -369,13 +382,13 @@ func templateFuncMap() template.FuncMap {
 		"getTime": func(date string) string {
 			return strings.Split(date, " ")[1]
 		},
-		"convertTimeSpent": convertSecondsToHoursAndMinutes,
+		"convertTimeSpent": convert.SecondsToHoursAndMinutes,
 	}
 
 	return fns
 }
 
-func parseEditedWorklog(date string, logs []byte) []SimplifiedTimesheet {
+func parseEditedWorklog(date string, logs []byte) []types.SimplifiedTimesheet {
 	// (#123456)    ISSUE-1       14:30    0h 30m    Some comment
 	re := regexp.MustCompile(
 		`\(#?([0-9]{6}|new)\)\s{1,}` + // ID
@@ -386,10 +399,10 @@ func parseEditedWorklog(date string, logs []byte) []SimplifiedTimesheet {
 
 	m := re.FindAllStringSubmatch(string(logs), -1)
 
-	worklogs := []SimplifiedTimesheet{}
+	worklogs := []types.SimplifiedTimesheet{}
 
 	for _, match := range m {
-		ts := new(SimplifiedTimesheet)
+		ts := new(types.SimplifiedTimesheet)
 		if match[1] == "new" {
 			ts.ID = 1
 		} else {
@@ -399,7 +412,7 @@ func parseEditedWorklog(date string, logs []byte) []SimplifiedTimesheet {
 		ts.Key = match[2]
 		ts.StartDate = date + " " + match[3]
 
-		d, err := convertDurationStringToSeconds(match[5])
+		d, err := convert.DurationStringToSeconds(match[5])
 		cobra.CheckErr(err)
 
 		ts.TimeSpent, _ = strconv.Atoi(d)

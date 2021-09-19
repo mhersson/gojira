@@ -26,6 +26,11 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"gitlab.com/mhersson/gojira/pkg/jira"
+	"gitlab.com/mhersson/gojira/pkg/types"
+	"gitlab.com/mhersson/gojira/pkg/util/format"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const describeUsage string = `
@@ -52,23 +57,23 @@ var describeCmd = &cobra.Command{
 		if len(args) == 1 {
 			issueKey = strings.ToUpper(args[0])
 		}
-		validateIssueKey(&issueKey)
-		issue := getIssue(issueKey)
+		validate.IssueKey(config, &issueKey, issueFile)
+		issue := jira.GetIssue(config, issueKey)
 
-		var epic IssueDescription
+		var epic types.IssueDescription
 		if issue.Fields.Epic != "" {
-			epic = getIssue(issue.Fields.Epic)
+			epic = jira.GetIssue(config, issue.Fields.Epic)
 		}
 
-		var issues []Issue
+		var issues []types.Issue
 		if issue.Fields.IssueType.Name == "Epic" {
-			issues = getIssuesInEpic(issue.Key)
+			issues = jira.GetIssuesInEpic(config, issue.Key)
 		}
 
 		printIssue(issue, epic)
 
 		if len(issues) > 0 {
-			fmt.Printf("\n%sIssues in Epic:%s\n", color.ul, color.nocolor)
+			fmt.Printf("\n%sIssues in Epic:%s\n", format.Color.Ul, format.Color.Nocolor)
 			printIssues(issues, false)
 		}
 
@@ -81,46 +86,24 @@ func init() {
 	describeCmd.SetUsageTemplate(describeUsage)
 }
 
-func getIssue(key string) IssueDescription {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key)
-
-	jsonResponse := &IssueDescription{}
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return *jsonResponse
-}
-
-func getIssuesInEpic(key string) []Issue {
-	url := config.JiraURL + "/rest/api/2/search?jql=cf[10500]=" + strings.ToUpper(key)
-
-	jsonResponse := new(struct {
-		Issues []Issue `json:"issues"`
-	})
-
-	getJSONResponse("GET", url, nil, jsonResponse)
-
-	return jsonResponse.Issues
-}
-
-func printIssue(issue, epic IssueDescription) {
+func printIssue(issue, epic types.IssueDescription) {
 	fmt.Println()
-	fmt.Println(formatHeader(issue.Fields.Project.Name, issue.Key, issue.Fields.Summary))
-	fmt.Printf("%sDetails:%s\n", color.ul, color.nocolor)
+	fmt.Println(format.Header(issue.Fields.Project.Name, issue.Key, issue.Fields.Summary))
+	fmt.Printf("%sDetails:%s\n", format.Color.Ul, format.Color.Nocolor)
 	fmt.Printf("Type:              %sStatus:      %s\n",
-		formatIssueType(issue.Fields.IssueType.Name, false), formatStatus(issue.Fields.Status.Name, false))
+		format.IssueType(issue.Fields.IssueType.Name, false), format.Status(issue.Fields.Status.Name, false))
 	fmt.Printf("Priority:          %sResolution:  %s\n",
-		formatPriority(issue.Fields.Priority.Name, false), issue.Fields.Resolution.Name)
+		format.Priority(issue.Fields.Priority.Name, false), issue.Fields.Resolution.Name)
 	fmt.Printf("Labels:            %s\n", strings.Join(issue.Fields.Labels, ", "))
-	fmt.Printf("Fixed Version/s:   %s\n", formatFixVersions(issue))
+	fmt.Printf("Fixed Version/s:   %s\n", format.FixVersions(issue))
 	fmt.Printf("Visibility:        %s\n", issue.Fields.ChangeVisibility.Value)
 
 	if epic.Fields.Summary != "" {
-		fmt.Printf("Epic:              %s\n", formatEpic(epic.Fields.Summary))
+		fmt.Printf("Epic:              %s\n", format.Epic(epic.Fields.Summary))
 	}
 	// ******************************************************************
 	fmt.Printf("\n%sPeople:%s%-57s%sDates:%s\n",
-		color.ul, color.nocolor, " ", color.ul, color.nocolor)
+		format.Color.Ul, format.Color.Nocolor, " ", format.Color.Ul, format.Color.Nocolor)
 	fmt.Printf("Assignee:          %-45sCreated: %s\n",
 		issue.Fields.Assignee.DisplayName+" ("+issue.Fields.Assignee.Name+")",
 		issue.Fields.Created[:16]) // Truncated at minutes
@@ -129,25 +112,25 @@ func printIssue(issue, epic IssueDescription) {
 		issue.Fields.Updated[:16]) // Truncated at minutes
 
 	// ******************************************************************
-	fmt.Printf("\n%sTime Tracking:%s\n", color.ul, color.nocolor)
+	fmt.Printf("\n%sTime Tracking:%s\n", format.Color.Ul, format.Color.Nocolor)
 	fmt.Printf("Estimated: %-25sLogged: %-20sRemaining: %s\n",
-		formatTimeEstimate(issue.Fields.TimeTracking.Estimate),
+		format.TimeEstimate(issue.Fields.TimeTracking.Estimate),
 		issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.Remaining)
 
 	// ******************************************************************
-	fmt.Printf("\n%sDescription:%s\n%s\n", color.ul, color.nocolor, issue.Fields.Description)
+	fmt.Printf("\n%sDescription:%s\n%s\n", format.Color.Ul, format.Color.Nocolor, issue.Fields.Description)
 
 	// ******************************************************************
 	printIssueLinks(issue)
 
 	// ******************************************************************
 	if len(issue.Fields.Comment.Comments) > 0 {
-		fmt.Printf("\n%sLatest comments:%s\n", color.ul, color.nocolor)
+		fmt.Printf("\n%sLatest comments:%s\n", format.Color.Ul, format.Color.Nocolor)
 		printComments(issue.Fields.Comment.Comments, 3)
 	}
 }
 
-func printIssueLinks(issue IssueDescription) {
+func printIssueLinks(issue types.IssueDescription) {
 	outward := make(map[string][]string)
 	inward := make(map[string][]string)
 
@@ -161,11 +144,11 @@ func printIssueLinks(issue IssueDescription) {
 
 			inward[link.Type.Inward] = append(inward[link.Type.Inward], fmt.Sprintf(
 				"%s%-15s%-45s%s%s\n",
-				formatIssueType(link.InwardIssue.Fields.IssueType.Name, true),
+				format.IssueType(link.InwardIssue.Fields.IssueType.Name, true),
 				link.InwardIssue.Key,
 				summary,
-				formatPriority(link.InwardIssue.Fields.Priority.Name, true),
-				formatStatus(link.InwardIssue.Fields.Status.Name, true)))
+				format.Priority(link.InwardIssue.Fields.Priority.Name, true),
+				format.Status(link.InwardIssue.Fields.Status.Name, true)))
 		} else {
 			summary = link.OutwardIssue.Fields.Summary
 			if len(summary) > 42 {
@@ -174,16 +157,16 @@ func printIssueLinks(issue IssueDescription) {
 
 			outward[link.Type.Outward] = append(outward[link.Type.Outward], fmt.Sprintf(
 				"%s%-15s%-45s%s%s\n",
-				formatIssueType(link.OutwardIssue.Fields.IssueType.Name, true),
+				format.IssueType(link.OutwardIssue.Fields.IssueType.Name, true),
 				link.OutwardIssue.Key,
 				summary,
-				formatPriority(link.OutwardIssue.Fields.Priority.Name, true),
-				formatStatus(link.OutwardIssue.Fields.Status.Name, true)))
+				format.Priority(link.OutwardIssue.Fields.Priority.Name, true),
+				format.Status(link.OutwardIssue.Fields.Status.Name, true)))
 		}
 	}
 
 	for k, v := range outward {
-		fmt.Printf("\n%s%s:%s\n", color.ul, strings.Title(k), color.nocolor)
+		fmt.Printf("\n%s%s:%s\n", format.Color.Ul, strings.Title(k), format.Color.Nocolor)
 
 		for _, l := range v {
 			fmt.Print(l)
@@ -191,116 +174,10 @@ func printIssueLinks(issue IssueDescription) {
 	}
 
 	for k, v := range inward {
-		fmt.Printf("\n%s%s:%s\n", color.ul, strings.Title(k), color.nocolor)
+		fmt.Printf("\n%s%s:%s\n", format.Color.Ul, strings.Title(k), format.Color.Nocolor)
 
 		for _, l := range v {
 			fmt.Print(l)
 		}
 	}
-}
-
-func formatHeader(project, key, summary string) string {
-	header := fmt.Sprintf("%s%s%s%s / %s - %s%s",
-		color.bold, color.ul, color.blue, project, key, summary, color.nocolor)
-
-	// If possible try and center the header within a page width of 100 char
-	// The - 12 is the spacing of the invisible color chars added above
-	l := len(summary)
-	if ((100-l)/2 - 12) <= 0 {
-		return header
-	}
-
-	s := strings.Repeat(" ", (100-l)/2-12)
-
-	return s + header
-}
-
-func formatEpic(summary string) string {
-	return fmt.Sprintf("%s%s%s", color.magenta, summary, color.nocolor)
-}
-
-func formatIssueType(issueType string, short bool) string {
-	var col string
-
-	switch issueType {
-	case "Improvement":
-		col = color.green
-	case "Task":
-		col = color.blue
-	case "Bug":
-		col = color.red
-	case "Epic", "Story":
-		col = color.magenta
-	case "Setup":
-		col = color.cyan
-	}
-
-	if short {
-		return fmt.Sprintf("%s%-12s%s", col, issueType, color.nocolor)
-	}
-
-	return fmt.Sprintf("%s%-45s%s", col, issueType, color.nocolor)
-}
-
-func formatStatus(status string, short bool) string {
-	var col string
-
-	switch status {
-	case "Closed", "Resolved", "Verified":
-		col = color.green
-	case "Programmed", "Peer Review", "Ready for Test", "Ready for review":
-		col = color.cyan
-	case "To Be Fixed", "In Progress", "Accepted", "Awaiting info":
-		col = color.blue
-	case "New", "Open":
-		col = color.bold
-	case "Rejected":
-		col = color.red
-	}
-
-	if short {
-		return fmt.Sprintf("%s%-10s%s", col, status, color.nocolor)
-	}
-
-	return fmt.Sprintf("%s%-20s%s", col, status, color.nocolor)
-}
-
-func formatPriority(priority string, short bool) string {
-	var col string
-
-	switch priority {
-	case "Low":
-		col = color.green
-	case "Normal":
-		col = color.blue
-	case "Critical":
-		col = color.red
-	case "High":
-		col = color.red
-	case "Blocker":
-		col = color.red
-	}
-
-	if short {
-		return fmt.Sprintf("%s%-10s%s", col, priority, color.nocolor)
-	}
-
-	return fmt.Sprintf("%s%-45s%s", col, priority, color.nocolor)
-}
-
-func formatTimeEstimate(estimate string) string {
-	if estimate == "" {
-		return "Not Specified"
-	}
-
-	return estimate
-}
-
-func formatFixVersions(issue IssueDescription) string {
-	fixVersions := ""
-	for _, v := range issue.Fields.FixVersions {
-		fixVersions += ", " + v.Name
-	}
-
-	return strings.Replace(fixVersions, ", ", "", 1)
 }
