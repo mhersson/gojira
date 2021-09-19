@@ -20,3 +20,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 package cmd
+
+import (
+	"embed"
+	"path"
+
+	"gitlab.com/mhersson/gojira/pkg/types"
+)
+
+// GojiraVersion GojiraGitRevision and GojiraRepository
+// are all inserted at build time from the Makefile.
+var GojiraVersion string
+var GojiraGitRevision string
+var GojiraRepository string
+
+var IssueKey string
+var WorkDate string    // Used by `add work` to specify date
+var WorkTime string    // Used by `add work` to specify at what time the work was done
+var WorkComment string // Used by `add work` to add a custom comment to the log
+var JQLFilter string   // Used by `get all` to create customer queries
+var Assignee string    // Used by `update assignee`
+var CacheFolder = path.Join(getHomeFolder(), ".gojira")
+var IssueFile = path.Join(CacheFolder, "issue")
+var IssueTypeFile = path.Join(CacheFolder, "issuetype")
+var BoardFile = path.Join(CacheFolder, "board")
+var VersionFlag bool
+
+var Cfg types.Config
+
+// ShowEntireWeek is used by myworklog.
+var ShowEntireWeek = false
+
+//go:embed templates/*.tmpl
+var TemplateFS embed.FS

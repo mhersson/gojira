@@ -36,9 +36,6 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
-// Used by get myworklog.
-var showEntireWeek = false
-
 const getAllIssuesUsage string = `This command will by default display all unresolved
 issues assinged to you, but by using the --filter flag
 you can compose your own jql filter. All query results,
@@ -137,7 +134,7 @@ var getAllIssuesCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"l"},
 	Run: func(cmd *cobra.Command, args []string) {
-		myIssues := jira.GetIssues(config, jqlFilter)
+		myIssues := jira.GetIssues(Cfg, JQLFilter)
 		printIssues(myIssues, true)
 	},
 }
@@ -148,7 +145,7 @@ var getActiveCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"a"},
 	Run: func(cmd *cobra.Command, args []string) {
-		key := util.GetActiveIssue(issueFile)
+		key := util.GetActiveIssue(IssueFile)
 		summary := getSummary(key)
 		fmt.Printf("Active Issue: %s %s\n", key, summary)
 	},
@@ -160,7 +157,7 @@ var getActiveBoardCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"b"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Active Board: %s\n", util.GetActiveBoard(boardFile))
+		fmt.Printf("Active Board: %s\n", util.GetActiveBoard(BoardFile))
 	},
 }
 
@@ -170,8 +167,8 @@ var getStatusCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"s"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validate.IssueKey(config, &issueKey, issueFile)
-		status := getStatus(issueKey)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		status := getStatus(IssueKey)
 		printStatus(status, false)
 	},
 }
@@ -182,10 +179,10 @@ var getTransistionsCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"t"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validate.IssueKey(config, &issueKey, issueFile)
-		status := getStatus(issueKey)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		status := getStatus(IssueKey)
 		printStatus(status, false)
-		tr := jira.GetTransistions(config, issueKey)
+		tr := jira.GetTransistions(Cfg, IssueKey)
 		printTransitions(tr)
 	},
 }
@@ -197,10 +194,10 @@ var getCommentsCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(config, &issueKey, issueFile)
-		comments := jira.GetComments(config, issueKey)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		comments := jira.GetComments(Cfg, IssueKey)
 		printComments(comments, 0)
 	},
 }
@@ -212,11 +209,11 @@ var getWorklogCmd = &cobra.Command{
 	Aliases: []string{"wl", "w"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(config, &issueKey, issueFile)
-		worklogs := jira.GetWorklogs(config, issueKey)
-		printWorklogs(issueKey, worklogs)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		worklogs := jira.GetWorklogs(Cfg, IssueKey)
+		printWorklogs(IssueKey, worklogs)
 	},
 }
 
@@ -230,8 +227,8 @@ var getMyWorklogCmd = &cobra.Command{
 			date = args[0]
 		}
 		if validate.Date(date) {
-			if config.UseTimesheetPlugin {
-				worklogs := jira.GetTimesheet(config, date, showEntireWeek)
+			if Cfg.UseTimesheetPlugin {
+				worklogs := jira.GetTimesheet(Cfg, date, ShowEntireWeek)
 
 				if len(worklogs) == 0 && util.DateIsToday(date) {
 					fmt.Println("You havn't logged any hours today.")
@@ -240,7 +237,7 @@ var getMyWorklogCmd = &cobra.Command{
 
 				printTimesheet(worklogs)
 			} else {
-				issues := jira.GetIssues(config, "worklogDate = "+date+
+				issues := jira.GetIssues(Cfg, "worklogDate = "+date+
 					" AND worklogAuthor = currentUser()")
 
 				if len(issues) == 0 && util.DateIsToday(date) {
@@ -248,7 +245,7 @@ var getMyWorklogCmd = &cobra.Command{
 					os.Exit(0)
 				}
 
-				myIssues := getUserTimeOnIssueAtDate(config.Username, date, issues)
+				myIssues := getUserTimeOnIssueAtDate(Cfg.Username, date, issues)
 				printMyWorklog(myIssues)
 			}
 		}
@@ -264,13 +261,13 @@ var getSprintCMD = &cobra.Command{
 		if len(args) >= 1 {
 			board = args[0]
 		} else {
-			board = util.GetActiveBoard(boardFile)
+			board = util.GetActiveBoard(BoardFile)
 		}
-		rapidView := jira.GetRapidViewID(config, board)
+		rapidView := jira.GetRapidViewID(Cfg, board)
 		if rapidView != nil && rapidView.SprintSupportEnabled {
-			issueTypes := jira.GetIssueTypes(config)
-			priorities := jira.GetPriorities(config)
-			sprints, issues := jira.GetSprints(config, rapidView.ID)
+			issueTypes := jira.GetIssueTypes(Cfg)
+			priorities := jira.GetPriorities(Cfg)
+			sprints, issues := jira.GetSprints(Cfg, rapidView.ID)
 			for _, sprint := range getActiveOrLatestSprint(sprints) {
 
 				fmt.Println(format.SprintHeader(*sprint))
@@ -295,7 +292,7 @@ func init() {
 	getCmd.AddCommand(getMyWorklogCmd)
 	getCmd.AddCommand(getSprintCMD)
 
-	getAllIssuesCmd.Flags().StringVarP(&jqlFilter,
+	getAllIssuesCmd.Flags().StringVarP(&JQLFilter,
 		"filter", "f", "", "write your own jql filter")
 
 	getAllIssuesCmd.SetUsageTemplate(getAllIssuesUsage)
@@ -303,13 +300,13 @@ func init() {
 	getWorklogCmd.SetUsageTemplate(getWorklogUsage)
 
 	getMyWorklogCmd.SetUsageTemplate(myWorklogUsage)
-	getMyWorklogCmd.Flags().BoolVarP(&showEntireWeek, "week", "w", false, "view current week (only with timesheet plugin)")
+	getMyWorklogCmd.Flags().BoolVarP(&ShowEntireWeek, "week", "w", false, "view current week (only with timesheet plugin)")
 
 	getSprintCMD.SetUsageTemplate(getSprintUsage)
 }
 
 func getStatus(key string) string {
-	jsonResponse := jira.GetIssues(config, "key = "+key)
+	jsonResponse := jira.GetIssues(Cfg, "key = "+key)
 	if len(jsonResponse) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
@@ -319,7 +316,7 @@ func getStatus(key string) string {
 }
 
 func getSummary(key string) string {
-	issues := jira.GetIssues(config, "key = "+key)
+	issues := jira.GetIssues(Cfg, "key = "+key)
 	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
@@ -374,7 +371,7 @@ func getTimeSpentOnIssue(user, date string, key string) int {
 	// Returns the number of hours and minutes a user
 	// has logged on an issue on the given date as total
 	// number of seconds
-	wl := jira.GetWorklogs(config, key)
+	wl := jira.GetWorklogs(Cfg, key)
 
 	timeSpent := 0
 
@@ -480,7 +477,7 @@ func printWorklogs(issueKey string, worklogs []types.Worklog) {
 }
 
 func printTimeTracking(key string) {
-	issue := jira.GetIssue(config, key)
+	issue := jira.GetIssue(Cfg, key)
 
 	colorRemaining := format.Color.Yellow
 	if issue.Fields.TimeTracking.Remaining == "0h" && issue.Fields.TimeTracking.Estimate != "" {

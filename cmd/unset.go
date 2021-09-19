@@ -41,7 +41,7 @@ func init() {
 }
 
 func unsetActive() {
-	err := os.RemoveAll(cacheFolder)
+	err := os.RemoveAll(CacheFolder)
 	if err != nil {
 		fmt.Println("Failed to clear active issue and board")
 		os.Exit(1)

@@ -39,26 +39,6 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/types"
 )
 
-// GojiraVersion GojiraGitRevision and GojiraRepository
-// are all inserted at build time from the Makefile.
-var GojiraVersion string
-var GojiraGitRevision string
-var GojiraRepository string
-
-var issueKey string
-var workDate string    // Used by `add work` to specify date
-var workTime string    // Used by `add work` to specify at what time the work was done
-var workComment string // Used by `add work` to add a custom comment to the log
-var jqlFilter string   // Used by `get all` to create customer queries
-var assignee string    // Used by `update assignee`
-var cacheFolder = path.Join(getHomeFolder(), ".gojira")
-var issueFile = path.Join(cacheFolder, "issue")
-var issueTypeFile = path.Join(cacheFolder, "issuetype")
-var boardFile = path.Join(cacheFolder, "board")
-var versionFlag bool
-
-var config types.Config
-
 var rootCmdLong = `The Gojira JIRA client
 
 This project is a product of me being bored out of my mind
@@ -92,7 +72,7 @@ var rootCmd = &cobra.Command{
 	Use:  "gojira",
 	Long: rootCmdLong,
 	Run: func(cmd *cobra.Command, args []string) {
-		if versionFlag {
+		if VersionFlag {
 			fmt.Printf("Gojira version: %s,  git rev: %s\n", GojiraVersion, GojiraGitRevision)
 
 			os.Exit(0)
@@ -111,7 +91,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "Print version information")
+	rootCmd.Flags().BoolVar(&VersionFlag, "version", false, "Print version information")
 }
 
 func initConfig() {
@@ -129,25 +109,25 @@ func initConfig() {
 	viper.SetConfigName("config")
 
 	if err := viper.ReadInConfig(); err == nil {
-		config.JiraURL = viper.GetString("JiraURL")
-		config.Username = viper.GetString("username")
-		config.Password = viper.GetString("password")
-		config.PasswordType = viper.GetString("passwordtype")
-		config.UseTimesheetPlugin = viper.GetBool("useTimesheetPlugin")
-		config.CheckForUpdates = viper.GetBool("checkForUpdates")
+		Cfg.JiraURL = viper.GetString("JiraURL")
+		Cfg.Username = viper.GetString("username")
+		Cfg.Password = viper.GetString("password")
+		Cfg.PasswordType = viper.GetString("passwordtype")
+		Cfg.UseTimesheetPlugin = viper.GetBool("useTimesheetPlugin")
+		Cfg.CheckForUpdates = viper.GetBool("checkForUpdates")
 
-		if config.JiraURL[len(config.JiraURL)-1:] == "/" {
-			config.JiraURL = config.JiraURL[:len(config.JiraURL)-1]
+		if Cfg.JiraURL[len(Cfg.JiraURL)-1:] == "/" {
+			Cfg.JiraURL = Cfg.JiraURL[:len(Cfg.JiraURL)-1]
 		}
 
-		err := getPassword(&config)
+		err := getPassword(&Cfg)
 		if err != nil {
 			fmt.Println("Failed to get password")
 			os.Exit(1)
 		}
 	}
 
-	if GojiraGitRevision != "" && config.CheckForUpdates {
+	if GojiraGitRevision != "" && Cfg.CheckForUpdates {
 		revs := runGit([]string{"ls-remote", GojiraRepository})
 		getLatestRevision(revs)
 	}

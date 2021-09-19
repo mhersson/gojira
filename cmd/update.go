@@ -84,20 +84,20 @@ var updateStatusCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(config, &issueKey, issueFile)
-		status := getStatus(issueKey)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		status := getStatus(IssueKey)
 		printStatus(status, false)
-		tr := jira.GetTransistions(config, issueKey)
+		tr := jira.GetTransistions(Cfg, IssueKey)
 		printTransitions(tr)
 		if len(tr) >= 1 {
-			err := updateStatus(issueKey, tr)
+			err := updateStatus(IssueKey, tr)
 			if err != nil {
 				fmt.Printf("Update failed: %s", err.Error())
 				os.Exit(1)
 			}
-			status = getStatus(issueKey)
+			status = getStatus(IssueKey)
 			printStatus(status, true)
 		}
 	},
@@ -110,21 +110,21 @@ var updateAssigneeCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(config, &issueKey, issueFile)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
 
-		if assignee == "" {
-			assignee = config.Username
+		if Assignee == "" {
+			Assignee = Cfg.Username
 		}
 
-		err := updateAssignee(issueKey, assignee)
+		err := updateAssignee(IssueKey, Assignee)
 		if err != nil {
 			fmt.Printf("Failed to update assignee - %s\n", err.Error())
 			os.Exit(1)
 		}
 
-		fmt.Printf("%s is assigned to %s\n", issueKey, assignee)
+		fmt.Printf("%s is assigned to %s\n", IssueKey, Assignee)
 	},
 }
 
@@ -137,7 +137,7 @@ func init() {
 	updateStatusCmd.SetUsageTemplate(updateStatusUsage)
 	updateAssigneeCmd.SetUsageTemplate(updateAssigneeUsage)
 
-	updateAssigneeCmd.PersistentFlags().StringVarP(&assignee,
+	updateAssigneeCmd.PersistentFlags().StringVarP(&Assignee,
 		"username", "u", "", "username of the new assignee")
 }
 
@@ -186,7 +186,7 @@ func updateStatus(key string, transitions []types.Transition) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
+	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
 	id := transitions[i].ID
 
 	payload := []byte(`{
@@ -215,7 +215,7 @@ func updateStatus(key string, transitions []types.Transition) error {
 }
 
 func updateAssignee(key string, user string) error {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
+	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
 	payload := []byte(`{"name":"` + user + `"}`)
 
 	resp, err := update("PUT", url, payload)
@@ -232,7 +232,7 @@ func update(method, url string, payload []byte) ([]byte, error) {
 	ctx := context.Background()
 	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(config.Username, config.Password)
+	req.SetBasicAuth(Cfg.Username, Cfg.Password)
 
 	client := &http.Client{}
 

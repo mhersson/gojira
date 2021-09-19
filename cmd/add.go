@@ -108,17 +108,17 @@ var addWorkCmd = &cobra.Command{
 		if len(args) == 1 {
 			work = args[0]
 		} else {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 			work = args[1]
 		}
 
-		validate.IssueKey(config, &issueKey, issueFile)
-		if workDate != "" && !validate.Date(workDate) {
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		if WorkDate != "" && !validate.Date(WorkDate) {
 			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd")
 			os.Exit(1)
 		}
 
-		if workTime != "" && !validate.Time(workTime) {
+		if WorkTime != "" && !validate.Time(WorkTime) {
 			fmt.Println("Invalid time. Tate must be on the format hh:mm")
 			os.Exit(1)
 		}
@@ -129,7 +129,7 @@ var addWorkCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = addWork(issueKey, duration, workComment)
+		err = addWork(IssueKey, duration, WorkComment)
 		if err != nil {
 			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
@@ -146,17 +146,17 @@ var addCommentCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 		}
 
-		validate.IssueKey(config, &issueKey, issueFile)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
 
 		comment, err := captureInputFromEditor("", "comment*")
 		if err != nil {
 			fmt.Println("Failed to add comment")
 		}
 
-		err = addComment(issueKey, comment)
+		err = addComment(IssueKey, comment)
 		if err != nil {
 			fmt.Printf("Failed to add comment - %s\n", err.Error())
 			os.Exit(1)
@@ -175,11 +175,11 @@ func init() {
 	addCommentCmd.SetUsageTemplate(addCommentUsage)
 	addWorkCmd.SetUsageTemplate(addWorkUsage)
 
-	addWorkCmd.PersistentFlags().StringVarP(&workDate,
+	addWorkCmd.PersistentFlags().StringVarP(&WorkDate,
 		"date", "d", "", "date, overrides the default date (today)")
-	addWorkCmd.PersistentFlags().StringVarP(&workTime,
+	addWorkCmd.PersistentFlags().StringVarP(&WorkTime,
 		"time", "t", "", "time, overrides the default time (now)")
-	addWorkCmd.PersistentFlags().StringVarP(&workComment,
+	addWorkCmd.PersistentFlags().StringVarP(&WorkComment,
 		"comment", "c", "", "add a comment to you worklog")
 }
 
@@ -191,21 +191,21 @@ func setWorkStarttime() string {
 	startTime := now.Format("2006-01-02T15:04:05.000+0000")
 
 	switch {
-	case workDate == "" && workTime == "":
+	case WorkDate == "" && WorkTime == "":
 		return startTime
-	case workDate != "" && workTime == "":
-		workTime = time.Now().Format("15:04")
-	case workDate == "" && workTime != "":
-		workDate = now.Format("2006-01-02")
+	case WorkDate != "" && WorkTime == "":
+		WorkTime = time.Now().Format("15:04")
+	case WorkDate == "" && WorkTime != "":
+		WorkDate = now.Format("2006-01-02")
 	}
 
-	t, _ := time.Parse("2006-01-02 15:04 MST", fmt.Sprintf("%s %s %s", workDate, workTime, zone))
+	t, _ := time.Parse("2006-01-02 15:04 MST", fmt.Sprintf("%s %s %s", WorkDate, WorkTime, zone))
 
 	return t.UTC().Format("2006-01-02T15:04:05.000+0000")
 }
 
 func addWork(key string, seconds string, comment string) error {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
+	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
 	payload := []byte(`{
 		"comment": "` + comment + `",
 		"started": "` + setWorkStarttime() + `",
@@ -223,7 +223,7 @@ func addWork(key string, seconds string, comment string) error {
 }
 
 func addComment(key string, comment []byte) error {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
+	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
 
 	escaped := makeStringJSONSafe(string(comment))
 

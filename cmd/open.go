@@ -53,10 +53,10 @@ var openCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(config, &issueKey, issueFile)
-		openbrowser(config.JiraURL + "/browse/" + issueKey)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		openbrowser(Cfg.JiraURL + "/browse/" + IssueKey)
 	},
 }
 

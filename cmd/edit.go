@@ -23,7 +23,6 @@ package cmd
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
 	"html/template"
 	"os"
@@ -39,9 +38,6 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/util/convert"
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
-
-//go:embed templates/*.tmpl
-var templateFS embed.FS
 
 const editDescriptionUsage string = `By default the active issue is edited,
 but this can be changed by adding the issue key as argument.
@@ -88,10 +84,10 @@ var editDescrptionCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
-			issueKey = strings.ToUpper(args[0])
+			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(config, &issueKey, issueFile)
-		issue := jira.GetIssue(config, issueKey)
+		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		issue := jira.GetIssue(Cfg, IssueKey)
 
 		desc, err := captureInputFromEditor(issue.Fields.Description, "description*")
 		if err != nil {
@@ -99,7 +95,7 @@ var editDescrptionCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = updateDescription(issueKey, desc)
+		err = updateDescription(IssueKey, desc)
 		if err != nil {
 			fmt.Printf("Failed to update description, %v\n", err)
 			os.Exit(1)
@@ -125,19 +121,19 @@ var editCommentCmd = &cobra.Command{
 			if validate.CommentID(args[0]) {
 				// Comment id is valid, the issuekey will be set to the active issue
 				commentID = args[0]
-				validate.IssueKey(config, &issueKey, issueFile)
+				validate.IssueKey(Cfg, &IssueKey, IssueFile)
 			} else {
 				// The argument is not a valid comment id, check if it
 				// is a valid issue key
-				issueKey = strings.ToUpper(args[0])
-				validate.IssueKey(config, &issueKey, issueFile)
+				IssueKey = strings.ToUpper(args[0])
+				validate.IssueKey(Cfg, &IssueKey, IssueFile)
 			}
 
 		case 2:
 			// If two arguments are provided first must be the issueKey,
 			// and second must be the comment id
-			issueKey = strings.ToUpper(args[0])
-			validate.IssueKey(config, &issueKey, issueFile)
+			IssueKey = strings.ToUpper(args[0])
+			validate.IssueKey(Cfg, &IssueKey, IssueFile)
 
 			commentID = args[1]
 			if !validate.CommentID(commentID) {
@@ -147,11 +143,11 @@ var editCommentCmd = &cobra.Command{
 
 		default:
 			// If no argument is provided edit the last comment of the current active issue
-			validate.IssueKey(config, &issueKey, issueFile)
+			validate.IssueKey(Cfg, &IssueKey, IssueFile)
 		}
 
 		// Get the existing comment
-		ec := getComment(issueKey, commentID)
+		ec := getComment(IssueKey, commentID)
 		if commentID == "" {
 			commentID = ec.ID
 		}
@@ -171,7 +167,7 @@ var editCommentCmd = &cobra.Command{
 			fmt.Println("Failed to read comment")
 		}
 
-		err = updateComment(issueKey, comment, commentID)
+		err = updateComment(IssueKey, comment, commentID)
 		if err != nil {
 			fmt.Printf("Failed to update comment - %s\n", err.Error())
 			os.Exit(1)
@@ -190,9 +186,9 @@ var editMyWorklogCmd = &cobra.Command{
 		if len(args) == 1 {
 			date = args[0]
 		}
-		if config.UseTimesheetPlugin {
+		if Cfg.UseTimesheetPlugin {
 			if validate.Date(date) {
-				ts := jira.GetTimesheet(config, date, showEntireWeek)
+				ts := jira.GetTimesheet(Cfg, date, ShowEntireWeek)
 				if len(ts) == 0 {
 					fmt.Println("There is nothing to edit.")
 					os.Exit(0)
@@ -223,7 +219,7 @@ func init() {
 }
 
 func updateDescription(key string, desc []byte) error {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key)
+	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key)
 
 	jsonDesc := makeStringJSONSafe(string(desc))
 
@@ -240,7 +236,7 @@ func updateDescription(key string, desc []byte) error {
 }
 
 func updateComment(key string, comment []byte, id string) error {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment/" + id
+	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment/" + id
 
 	escaped := makeStringJSONSafe(string(comment))
 
@@ -268,10 +264,10 @@ func updateWorklog(worklog types.SimplifiedTimesheet) error {
 		return &types.Error{Message: "invalid date and time"}
 	}
 
-	workDate = dateAndTime[0]
-	workTime = dateAndTime[1]
+	WorkDate = dateAndTime[0]
+	WorkTime = dateAndTime[1]
 
-	url := config.JiraURL + "/rest/api/2/issue/" +
+	url := Cfg.JiraURL + "/rest/api/2/issue/" +
 		strings.ToUpper(worklog.Key) + "/worklog/" + strconv.Itoa(worklog.ID) + "/"
 
 	payload := []byte(`{
@@ -321,8 +317,8 @@ func addNewWorklogs(editedWorklogs []types.SimplifiedTimesheet) {
 	for _, e := range editedWorklogs {
 		dateAndTime := strings.Split(e.StartDate, " ")
 		if len(dateAndTime) == 2 {
-			workDate = dateAndTime[0]
-			workTime = dateAndTime[1]
+			WorkDate = dateAndTime[0]
+			WorkTime = dateAndTime[1]
 		}
 
 		if e.ID == 1 {
@@ -344,7 +340,7 @@ func addNewWorklogs(editedWorklogs []types.SimplifiedTimesheet) {
 }
 
 func getComment(key, commentID string) types.Comment {
-	comments := jira.GetComments(config, key)
+	comments := jira.GetComments(Cfg, key)
 
 	if commentID == "" && len(comments) >= 1 {
 		return comments[len(comments)-1]
@@ -360,7 +356,7 @@ func getComment(key, commentID string) types.Comment {
 }
 
 func executeInternalTemplate(filename string, content interface{}) []byte {
-	temp, err := templateFS.ReadFile(filepath.Join("templates", filename))
+	temp, err := TemplateFS.ReadFile(filepath.Join("templates", filename))
 	if err != nil {
 		panic(err)
 	}

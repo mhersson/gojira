@@ -56,7 +56,7 @@ by the user, and only then will the request be sent to JIRA.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		key := strings.ToUpper(args[0])
-		validProjects := jira.GetValidProjectsAndIssueType(config)
+		validProjects := jira.GetValidProjectsAndIssueType(Cfg)
 		project := validate.ProjectKey(key, validProjects)
 		if project.ID == "" {
 			fmt.Printf("%s is not a valid project key\n", key)
@@ -96,7 +96,7 @@ func init() {
 }
 
 func getUserInputPriority() (string, string) {
-	priorities := jira.GetPriorities(config)
+	priorities := jira.GetPriorities(Cfg)
 
 	fmt.Println("Choose issue priority:")
 
@@ -198,7 +198,7 @@ func getUserInputConfirmOk(project types.Project, issueType, pri, summary, descr
 
 func createNewIssue(project types.Project, issueTypeID,
 	priorityID, summary, description string) (string, error) {
-	url := config.JiraURL + "/rest/api/2/issue"
+	url := Cfg.JiraURL + "/rest/api/2/issue"
 	method := "POST"
 
 	payload := []byte(`{

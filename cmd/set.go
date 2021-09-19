@@ -65,9 +65,9 @@ var setActiveCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		switch args[0] {
 		case "issue":
-			issueKey = strings.ToUpper(args[1])
-			setActiveIssue(issueKey)
-			key := util.GetActiveIssue(issueFile)
+			IssueKey = strings.ToUpper(args[1])
+			setActiveIssue(IssueKey)
+			key := util.GetActiveIssue(IssueFile)
 			fmt.Printf("Issue %s is active\n", key)
 		case "board":
 			board := strings.ToLower(args[1])
@@ -89,7 +89,7 @@ func init() {
 }
 
 func setActiveIssue(key string) {
-	issues := jira.GetIssues(config, "key = "+key)
+	issues := jira.GetIssues(Cfg, "key = "+key)
 	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist, and can not be set active\n", key)
 		os.Exit(1)
@@ -97,13 +97,13 @@ func setActiveIssue(key string) {
 
 	createCacheFolder()
 
-	err := ioutil.WriteFile(issueFile, []byte(key), 0600)
+	err := ioutil.WriteFile(IssueFile, []byte(key), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
 		os.Exit(1)
 	}
 
-	err = ioutil.WriteFile(issueTypeFile,
+	err = ioutil.WriteFile(IssueTypeFile,
 		[]byte(issues[0].Fields.IssueType.ID), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
@@ -112,14 +112,14 @@ func setActiveIssue(key string) {
 }
 
 func setActiveBoard(board string) {
-	if id := jira.GetRapidViewID(config, board); id == nil {
+	if id := jira.GetRapidViewID(Cfg, board); id == nil {
 		fmt.Printf("Board %s does not exist, and can not be set active\n", board)
 		os.Exit(1)
 	}
 
 	createCacheFolder()
 
-	err := ioutil.WriteFile(boardFile, []byte(board), 0600)
+	err := ioutil.WriteFile(BoardFile, []byte(board), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", board)
 		os.Exit(1)
