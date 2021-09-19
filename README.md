@@ -6,17 +6,16 @@ because of Corona virus quarantine combined with Easter holidays.
 Gojira is the Japanese word for Godzilla.
 
 ### Key Features:
-  - Create new issues
-  - Add and update comments
-  - Use your favorite editor set by $EDITOR, defaults to vim
-  - Change status
-  - Assign to yourself or to others
-  - Report time spent
+  - Create issues
+  - Create and edit existing comments
+  - Create or edit worklogs for time reporting
+  - Update issue status and assignee
   - Show comments, current status and the entire worklog
   - One view to show it all with the describe command
   - Display all unresolved issues assigned to you
   - Display the current sprint with all issues and statuses
   - Mark issue and/or board as active for less typing
+  - Use your favorite editor set by $EDITOR, defaults to vim
   - Open issue in default browser
   
 
@@ -28,13 +27,9 @@ assigned aliases to their first letter for less typing.
 
 
 ### Build Instructions:
-Install a Go version with support for Go modules >= 1.11<br/>
-On Linux just install Go from your distributions package repositories.
+Gojira requires Go >= 1.16
 
-Personally I like setting the [GOPATH](https://github.com/golang/go/wiki/SettingGOPATH)
-
-
-Clone the repo then run `go build` and/or `go install`
+Clone the repo then run `make build` and/or `make install`
 
 
 ### Install Instructions
