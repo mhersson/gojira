@@ -286,7 +286,7 @@ func parseEditedWorklog(date string, logs []byte) []types.SimplifiedTimesheet {
 			`([A-Z]{2,9}-[0-9]{1,4})\s{1,}` + // Key
 			`(([0-1][0-9]|2[0-3]):[0-5][0-9])\s{1,}` + // Time
 			`(([0-9.]{1,}h)?\s?([0-6]?[0-9]m)?)\s*` + // Duration
-			`([A-Za-z0-9,\s]+)`) // Comment
+			`([A-Za-z0-9_\-,\.\s]+)`) // Comment
 
 	m := re.FindAllStringSubmatch(string(logs), -1)
 
