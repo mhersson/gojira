@@ -8,5 +8,5 @@ All other changes will be discarded when exiting the editor.
 ------------------------------------------------------------
 
 {{- end }}
-(#{{ .ID }})    {{ .Key | printf "%-10s"}}    {{ .StartDate | getTime |printf "%-5s" }}    {{  convertTimeSpent .TimeSpent false |printf "%-6s"}}    {{ .Comment }}
+(#{{ .ID | new }})    {{ .Key | printf "%-10s"}}    {{ .StartDate | getTime |printf "%-5s" }}    {{  convertTimeSpent .TimeSpent false |printf "%-6s"}}    {{ .Comment }}
 {{- end }}

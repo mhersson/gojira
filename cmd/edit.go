@@ -191,9 +191,34 @@ var editMyWorklogCmd = &cobra.Command{
 					os.Exit(0)
 				}
 				worklogs := util.GetWorklogsSorted(ts, false)
+
+				// If mergetoday is set
+				if !util.DateIsToday(date) && MergeToday && !ShowEntireWeek {
+					date = util.Today() // Set the date today
+					ts = jira.GetTimesheet(date, ShowEntireWeek)
+					wlToday := util.GetWorklogsSorted(ts, false)
+
+					// Reset the ID and the date, and append the logs on today
+					for _, w := range worklogs {
+						wlToday = append(wlToday, types.SimplifiedTimesheet{
+							ID:        666,
+							Date:      date,
+							StartDate: w.StartDate,
+							Key:       w.Key,
+							Summary:   w.Summary,
+							Comment:   w.Comment,
+							TimeSpent: w.TimeSpent,
+						})
+					}
+
+					// Set the complete list as the worklog
+					worklogs = wlToday
+				}
+
 				out := util.ExecuteTemplate("edit-worklog.tmpl", worklogs)
 				edited, err := captureInputFromEditor(string(out), "edit-worklog-*")
 				cobra.CheckErr(err)
+
 				editedWorklogs := parseEditedWorklog(date, edited)
 				updateChangedWorklogs(worklogs, editedWorklogs)
 				addNewWorklogs(editedWorklogs)
@@ -213,6 +238,7 @@ func init() {
 
 	editDescrptionCmd.SetUsageTemplate(editDescriptionUsage)
 	editCommentCmd.SetUsageTemplate(editCommentUsage)
+	editMyWorklogCmd.Flags().BoolVarP(&MergeToday, "merge-today", "", false, "merge/append the records from that date")
 }
 
 func updateChangedWorklogs(worklogs, editedWorklogs []types.SimplifiedTimesheet) {
@@ -220,7 +246,8 @@ func updateChangedWorklogs(worklogs, editedWorklogs []types.SimplifiedTimesheet)
 
 	for _, e := range editedWorklogs {
 		for _, w := range worklogs {
-			if e.ID == w.ID && (e.StartDate != w.StartDate || e.TimeSpent != w.TimeSpent || e.Comment != w.Comment) {
+			if e.ID == w.ID && e.ID != 666 &&
+				(e.StartDate != w.StartDate || e.TimeSpent != w.TimeSpent || e.Comment != w.Comment) {
 				err := jira.UpdateWorklog(e)
 				if err != nil {
 					fmt.Printf("Failed to update worklog id: %d, key; %s\n", e.ID, e.Key)
@@ -245,7 +272,7 @@ func addNewWorklogs(editedWorklogs []types.SimplifiedTimesheet) {
 	for _, e := range editedWorklogs {
 		dateAndTime := strings.Split(e.StartDate, " ")
 
-		if e.ID == 1 {
+		if e.ID == 666 {
 			err := jira.AddWorklog(dateAndTime[0], dateAndTime[1], e.Key, strconv.Itoa(e.TimeSpent), e.Comment)
 			if err != nil {
 				fmt.Printf("Failed to add new worklog key; %s\n", e.Key)
@@ -253,8 +280,6 @@ func addNewWorklogs(editedWorklogs []types.SimplifiedTimesheet) {
 				os.Exit(1)
 			}
 			success++
-
-			break
 		}
 	}
 
@@ -295,7 +320,7 @@ func parseEditedWorklog(date string, logs []byte) []types.SimplifiedTimesheet {
 	for _, match := range m {
 		ts := new(types.SimplifiedTimesheet)
 		if match[1] == "new" {
-			ts.ID = 1
+			ts.ID = 666
 		} else {
 			ts.ID, _ = strconv.Atoi(match[1])
 		}

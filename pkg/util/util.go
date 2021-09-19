@@ -34,6 +34,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -80,6 +81,13 @@ func DateIsToday(date string) bool {
 	}
 
 	return false
+}
+
+// Returns to today's date on format 2006-01-02.
+func Today() string {
+	t := time.Now()
+
+	return t.Format("2006-01-02")
 }
 
 func GetActiveIssue(path string) string {
@@ -222,6 +230,13 @@ func templateFuncMap() template.FuncMap {
 			return strings.Split(date, " ")[1]
 		},
 		"convertTimeSpent": convert.SecondsToHoursAndMinutes,
+		"new": func(id int) string {
+			if id == 666 {
+				return "new"
+			}
+
+			return strconv.Itoa(id)
+		},
 	}
 
 	return fns

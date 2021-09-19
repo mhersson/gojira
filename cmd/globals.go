@@ -39,13 +39,12 @@ var WorkTime string    // Used by `add work` to specify at what time the work wa
 var WorkComment string // Used by `add work` to add a custom comment to the log
 var JQLFilter string   // Used by `get all` to create customer queries
 var Assignee string    // Used by `update assignee`
+var VersionFlag bool
+var ShowEntireWeek = false // Used by `get myworklog`
+var MergeToday = false     // Used by `edit myworklog`
 var CacheFolder = path.Join(getHomeFolder(), ".gojira")
 var IssueFile = path.Join(CacheFolder, "issue")
 var IssueTypeFile = path.Join(CacheFolder, "issuetype")
 var BoardFile = path.Join(CacheFolder, "board")
-var VersionFlag bool
 
 var Cfg types.Config
-
-// ShowEntireWeek is used by myworklog.
-var ShowEntireWeek = false
