@@ -30,6 +30,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -37,6 +38,7 @@ import (
 
 	"gitlab.com/mhersson/gojira/pkg/types"
 	"gitlab.com/mhersson/gojira/pkg/util"
+	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 var server string
@@ -219,6 +221,22 @@ func GetSprints(rapidViewID int) ([]types.Sprint, []types.SprintIssue) {
 	query(http.MethodGet, url, nil, resp)
 
 	return resp.Sprints, resp.Issues
+}
+
+func CheckIssueKey(key *string, issueFile string) {
+	if *key != "" {
+		if !validate.IssueKey(key) {
+			fmt.Println("Invalid key")
+			os.Exit(1)
+		}
+
+		if !IssueExists(key) {
+			fmt.Printf("%s does not exist\n", *key)
+			os.Exit(1)
+		}
+	} else {
+		*key = util.GetActiveIssue(issueFile)
+	}
 }
 
 func IssueExists(issueKey *string) bool {

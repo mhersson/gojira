@@ -83,7 +83,7 @@ var editDescrptionCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		issue := jira.GetIssue(IssueKey)
 
 		desc, err := captureInputFromEditor(issue.Fields.Description, "description*")
@@ -118,19 +118,19 @@ var editCommentCmd = &cobra.Command{
 			if validate.CommentID(args[0]) {
 				// Comment id is valid, the issuekey will be set to the active issue
 				commentID = args[0]
-				validate.IssueKey(&IssueKey, IssueFile)
+				jira.CheckIssueKey(&IssueKey, IssueFile)
 			} else {
 				// The argument is not a valid comment id, check if it
 				// is a valid issue key
 				IssueKey = strings.ToUpper(args[0])
-				validate.IssueKey(&IssueKey, IssueFile)
+				jira.CheckIssueKey(&IssueKey, IssueFile)
 			}
 
 		case 2:
 			// If two arguments are provided first must be the issueKey,
 			// and second must be the comment id
 			IssueKey = strings.ToUpper(args[0])
-			validate.IssueKey(&IssueKey, IssueFile)
+			jira.CheckIssueKey(&IssueKey, IssueFile)
 
 			commentID = args[1]
 			if !validate.CommentID(commentID) {
@@ -140,7 +140,7 @@ var editCommentCmd = &cobra.Command{
 
 		default:
 			// If no argument is provided edit the last comment of the current active issue
-			validate.IssueKey(&IssueKey, IssueFile)
+			jira.CheckIssueKey(&IssueKey, IssueFile)
 		}
 
 		// Get the existing comment

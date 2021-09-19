@@ -167,7 +167,7 @@ var getStatusCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"s"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		status := getStatus(IssueKey)
 		printStatus(status, false)
 	},
@@ -179,7 +179,7 @@ var getTransistionsCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"t"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		status := getStatus(IssueKey)
 		printStatus(status, false)
 		tr := jira.GetTransistions(IssueKey)
@@ -196,7 +196,7 @@ var getCommentsCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		comments := jira.GetComments(IssueKey)
 		printComments(comments, 0)
 	},
@@ -211,7 +211,7 @@ var getWorklogCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		worklogs := jira.GetWorklogs(IssueKey)
 		printWorklogs(IssueKey, worklogs)
 	},

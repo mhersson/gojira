@@ -28,7 +28,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"gitlab.com/mhersson/gojira/pkg/jira"
-	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const updateStatusUsage string = `By default the active issue gets updated,
@@ -78,7 +77,7 @@ var updateStatusCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		status := getStatus(IssueKey)
 		printStatus(status, false)
 		tr := jira.GetTransistions(IssueKey)
@@ -104,7 +103,7 @@ var updateAssigneeCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 
 		if Assignee == "" {
 			Assignee = Cfg.Username

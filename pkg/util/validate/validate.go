@@ -22,14 +22,10 @@ THE SOFTWARE.
 package validate
 
 import (
-	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
-	"gitlab.com/mhersson/gojira/pkg/jira"
 	"gitlab.com/mhersson/gojira/pkg/types"
-	"gitlab.com/mhersson/gojira/pkg/util"
 )
 
 func Date(date string) bool {
@@ -44,23 +40,10 @@ func Time(time string) bool {
 	return re.MatchString(time)
 }
 
-func IssueKey(key *string, issueFile string) {
-	if *key != "" {
-		re := regexp.MustCompile("[A-Z]{2,9}-[0-9]{1,4}")
+func IssueKey(key *string) bool {
+	re := regexp.MustCompile("^[A-Z]{2,9}-[0-9]{1,4}$")
 
-		m := re.MatchString(*key)
-		if !m {
-			fmt.Println("Invalid key")
-			os.Exit(1)
-		}
-
-		if !jira.IssueExists(key) {
-			fmt.Printf("%s does not exist\n", *key)
-			os.Exit(1)
-		}
-	} else {
-		*key = util.GetActiveIssue(issueFile)
-	}
+	return re.MatchString(*key)
 }
 
 func ProjectKey(key string, projects types.IssueCreateMeta) types.Project {

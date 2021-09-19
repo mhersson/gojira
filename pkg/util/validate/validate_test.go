@@ -75,6 +75,30 @@ func TestTime(t *testing.T) {
 	}
 }
 
+func TestIssueKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"GOJIRA-1", true},
+		{"GOJIRA-1910", true},
+		{"gojira-1910", false},
+		{"GOJIRA-1910342", false},
+		{"GOJIRA1-1", false},
+		{"gojira-1-1", false},
+	}
+
+	for _, v := range tests {
+		ans := validate.IssueKey(&v.input)
+
+		if ans != v.expected {
+			t.Errorf("Input: %s, got: %v, want: %v", v.input, ans, v.expected)
+		}
+	}
+}
+
 func TestCommentID(t *testing.T) {
 	t.Parallel()
 

@@ -30,7 +30,6 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/jira"
 	"gitlab.com/mhersson/gojira/pkg/types"
 	"gitlab.com/mhersson/gojira/pkg/util/format"
-	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const describeUsage string = `
@@ -57,7 +56,7 @@ var describeCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		issue := jira.GetIssue(IssueKey)
 
 		var epic types.IssueDescription

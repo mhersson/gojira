@@ -111,7 +111,7 @@ var addWorkCmd = &cobra.Command{
 			work = args[1]
 		}
 
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 		if WorkDate != "" && !validate.Date(WorkDate) {
 			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd")
 			os.Exit(1)
@@ -148,7 +148,7 @@ var addCommentCmd = &cobra.Command{
 			IssueKey = strings.ToUpper(args[0])
 		}
 
-		validate.IssueKey(&IssueKey, IssueFile)
+		jira.CheckIssueKey(&IssueKey, IssueFile)
 
 		comment, err := captureInputFromEditor("", "comment*")
 		if err != nil {
