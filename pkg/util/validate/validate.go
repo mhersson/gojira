@@ -44,7 +44,7 @@ func Time(time string) bool {
 	return re.MatchString(time)
 }
 
-func IssueKey(config types.Config, key *string, issueFile string) {
+func IssueKey(key *string, issueFile string) {
 	if *key != "" {
 		re := regexp.MustCompile("[A-Z]{2,9}-[0-9]{1,4}")
 
@@ -54,7 +54,7 @@ func IssueKey(config types.Config, key *string, issueFile string) {
 			os.Exit(1)
 		}
 
-		if !jira.IssueExists(config, key) {
+		if !jira.IssueExists(key) {
 			fmt.Printf("%s does not exist\n", *key)
 			os.Exit(1)
 		}

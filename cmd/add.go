@@ -22,13 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/mhersson/gojira/pkg/jira"
 	"gitlab.com/mhersson/gojira/pkg/util/convert"
 	"gitlab.com/mhersson/gojira/pkg/util/format"
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
@@ -112,7 +111,7 @@ var addWorkCmd = &cobra.Command{
 			work = args[1]
 		}
 
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		validate.IssueKey(&IssueKey, IssueFile)
 		if WorkDate != "" && !validate.Date(WorkDate) {
 			fmt.Println("Invalid date. Date must be on the format yyyy-mm-dd")
 			os.Exit(1)
@@ -129,7 +128,7 @@ var addWorkCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = addWork(IssueKey, duration, WorkComment)
+		err = jira.AddWorklog(WorkDate, WorkTime, IssueKey, duration, WorkComment)
 		if err != nil {
 			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
@@ -149,14 +148,14 @@ var addCommentCmd = &cobra.Command{
 			IssueKey = strings.ToUpper(args[0])
 		}
 
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		validate.IssueKey(&IssueKey, IssueFile)
 
 		comment, err := captureInputFromEditor("", "comment*")
 		if err != nil {
 			fmt.Println("Failed to add comment")
 		}
 
-		err = addComment(IssueKey, comment)
+		err = jira.AddComment(IssueKey, comment)
 		if err != nil {
 			fmt.Printf("Failed to add comment - %s\n", err.Error())
 			os.Exit(1)
@@ -181,82 +180,4 @@ func init() {
 		"time", "t", "", "time, overrides the default time (now)")
 	addWorkCmd.PersistentFlags().StringVarP(&WorkComment,
 		"comment", "c", "", "add a comment to you worklog")
-}
-
-func setWorkStarttime() string {
-	now := time.Now()
-	zone, _ := now.Zone()
-
-	// jira time format - "started": "2017-12-07T09:23:19.552+0000"
-	startTime := now.Format("2006-01-02T15:04:05.000+0000")
-
-	switch {
-	case WorkDate == "" && WorkTime == "":
-		return startTime
-	case WorkDate != "" && WorkTime == "":
-		WorkTime = time.Now().Format("15:04")
-	case WorkDate == "" && WorkTime != "":
-		WorkDate = now.Format("2006-01-02")
-	}
-
-	t, _ := time.Parse("2006-01-02 15:04 MST", fmt.Sprintf("%s %s %s", WorkDate, WorkTime, zone))
-
-	return t.UTC().Format("2006-01-02T15:04:05.000+0000")
-}
-
-func addWork(key string, seconds string, comment string) error {
-	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
-	payload := []byte(`{
-		"comment": "` + comment + `",
-		"started": "` + setWorkStarttime() + `",
-		"timeSpentSeconds": ` + seconds +
-		`}`)
-
-	resp, err := update("POST", url, payload)
-	if err != nil {
-		fmt.Printf("%s\n", resp)
-
-		return err
-	}
-
-	return nil
-}
-
-func addComment(key string, comment []byte) error {
-	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
-
-	escaped := makeStringJSONSafe(string(comment))
-
-	payload := []byte(`{
-		"body": "` + escaped + `",
-		"visibility": {
-			"type": "group",
-			"value": "Internal users"
-		}
-	}`)
-
-	resp, err := update("POST", url, payload)
-	if err != nil {
-		fmt.Printf("%s\n", resp)
-
-		return err
-	}
-
-	return nil
-}
-
-func makeStringJSONSafe(str string) string {
-	strText := strings.ReplaceAll(str, "```", "{noformat}")
-	// Convert the string into json to escape whatever
-	// chars json needs to have escaped
-	jsonStr, err := json.Marshal(strText)
-	if err != nil {
-		fmt.Println("Failed to parse comment")
-		os.Exit(1)
-	}
-
-	// Remove the surrounding curly brackets
-	escaped := string(jsonStr[1 : len(jsonStr)-1])
-
-	return escaped
 }

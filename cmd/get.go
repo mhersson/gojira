@@ -134,7 +134,7 @@ var getAllIssuesCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"l"},
 	Run: func(cmd *cobra.Command, args []string) {
-		myIssues := jira.GetIssues(Cfg, JQLFilter)
+		myIssues := jira.GetIssues(JQLFilter)
 		printIssues(myIssues, true)
 	},
 }
@@ -167,7 +167,7 @@ var getStatusCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"s"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		validate.IssueKey(&IssueKey, IssueFile)
 		status := getStatus(IssueKey)
 		printStatus(status, false)
 	},
@@ -179,10 +179,10 @@ var getTransistionsCmd = &cobra.Command{
 	Args:    cobra.NoArgs,
 	Aliases: []string{"t"},
 	Run: func(cmd *cobra.Command, args []string) {
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		validate.IssueKey(&IssueKey, IssueFile)
 		status := getStatus(IssueKey)
 		printStatus(status, false)
-		tr := jira.GetTransistions(Cfg, IssueKey)
+		tr := jira.GetTransistions(IssueKey)
 		printTransitions(tr)
 	},
 }
@@ -196,8 +196,8 @@ var getCommentsCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
-		comments := jira.GetComments(Cfg, IssueKey)
+		validate.IssueKey(&IssueKey, IssueFile)
+		comments := jira.GetComments(IssueKey)
 		printComments(comments, 0)
 	},
 }
@@ -211,8 +211,8 @@ var getWorklogCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
-		worklogs := jira.GetWorklogs(Cfg, IssueKey)
+		validate.IssueKey(&IssueKey, IssueFile)
+		worklogs := jira.GetWorklogs(IssueKey)
 		printWorklogs(IssueKey, worklogs)
 	},
 }
@@ -228,7 +228,7 @@ var getMyWorklogCmd = &cobra.Command{
 		}
 		if validate.Date(date) {
 			if Cfg.UseTimesheetPlugin {
-				worklogs := jira.GetTimesheet(Cfg, date, ShowEntireWeek)
+				worklogs := jira.GetTimesheet(date, ShowEntireWeek)
 
 				if len(worklogs) == 0 && util.DateIsToday(date) {
 					fmt.Println("You havn't logged any hours today.")
@@ -237,7 +237,7 @@ var getMyWorklogCmd = &cobra.Command{
 
 				printTimesheet(worklogs)
 			} else {
-				issues := jira.GetIssues(Cfg, "worklogDate = "+date+
+				issues := jira.GetIssues("worklogDate = " + date +
 					" AND worklogAuthor = currentUser()")
 
 				if len(issues) == 0 && util.DateIsToday(date) {
@@ -263,11 +263,11 @@ var getSprintCMD = &cobra.Command{
 		} else {
 			board = util.GetActiveBoard(BoardFile)
 		}
-		rapidView := jira.GetRapidViewID(Cfg, board)
+		rapidView := jira.GetRapidViewID(board)
 		if rapidView != nil && rapidView.SprintSupportEnabled {
-			issueTypes := jira.GetIssueTypes(Cfg)
-			priorities := jira.GetPriorities(Cfg)
-			sprints, issues := jira.GetSprints(Cfg, rapidView.ID)
+			issueTypes := jira.GetIssueTypes()
+			priorities := jira.GetPriorities()
+			sprints, issues := jira.GetSprints(rapidView.ID)
 			for _, sprint := range getActiveOrLatestSprint(sprints) {
 
 				fmt.Println(format.SprintHeader(*sprint))
@@ -306,7 +306,7 @@ func init() {
 }
 
 func getStatus(key string) string {
-	jsonResponse := jira.GetIssues(Cfg, "key = "+key)
+	jsonResponse := jira.GetIssues("key = " + key)
 	if len(jsonResponse) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
@@ -316,7 +316,7 @@ func getStatus(key string) string {
 }
 
 func getSummary(key string) string {
-	issues := jira.GetIssues(Cfg, "key = "+key)
+	issues := jira.GetIssues("key = " + key)
 	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist\n", key)
 		os.Exit(1)
@@ -371,7 +371,7 @@ func getTimeSpentOnIssue(user, date string, key string) int {
 	// Returns the number of hours and minutes a user
 	// has logged on an issue on the given date as total
 	// number of seconds
-	wl := jira.GetWorklogs(Cfg, key)
+	wl := jira.GetWorklogs(key)
 
 	timeSpent := 0
 
@@ -477,7 +477,7 @@ func printWorklogs(issueKey string, worklogs []types.Worklog) {
 }
 
 func printTimeTracking(key string) {
-	issue := jira.GetIssue(Cfg, key)
+	issue := jira.GetIssue(key)
 
 	colorRemaining := format.Color.Yellow
 	if issue.Fields.TimeTracking.Remaining == "0h" && issue.Fields.TimeTracking.Estimate != "" {

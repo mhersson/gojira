@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -34,6 +33,7 @@ import (
 
 	"gitlab.com/mhersson/gojira/pkg/jira"
 	"gitlab.com/mhersson/gojira/pkg/types"
+	"gitlab.com/mhersson/gojira/pkg/util"
 	"gitlab.com/mhersson/gojira/pkg/util/format"
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
@@ -56,7 +56,7 @@ by the user, and only then will the request be sent to JIRA.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		key := strings.ToUpper(args[0])
-		validProjects := jira.GetValidProjectsAndIssueType(Cfg)
+		validProjects := jira.GetValidProjectsAndIssueType()
 		project := validate.ProjectKey(key, validProjects)
 		if project.ID == "" {
 			fmt.Printf("%s is not a valid project key\n", key)
@@ -70,7 +70,7 @@ by the user, and only then will the request be sent to JIRA.`,
 
 		getUserInputConfirmOk(project, issueTypeName, priorityName, rawSummary, rawDesc)
 
-		newKey, err := createNewIssue(project, issueTypeID, priorityID, summary, desc)
+		newKey, err := jira.CreateNewIssue(project, issueTypeID, priorityID, summary, desc)
 		if err != nil {
 			fmt.Printf("Failed to create issue - %s\n", err.Error())
 			fmt.Println(newKey)
@@ -79,15 +79,13 @@ by the user, and only then will the request be sent to JIRA.`,
 
 		fmt.Printf("%sNew issue has got key %s%s\n", format.Color.Blue, newKey, format.Color.Nocolor)
 
-		ans := getUserInput("Do you want to set the new issue active [y/N]: ", "[y|n]")
+		ans := util.GetUserInput("Do you want to set the new issue active [y/N]: ", "[y|n]")
 		if ans == "y" {
 			setActiveIssue(newKey)
 		}
 
 		fmt.Printf("\n%sSuccessfully created new issue - run describe to see the details%s\n\n",
 			format.Color.Green, format.Color.Nocolor)
-		// printIssue(getIssue(newKey), IssueDescriptionResponse{})
-
 	},
 }
 
@@ -96,7 +94,7 @@ func init() {
 }
 
 func getUserInputPriority() (string, string) {
-	priorities := jira.GetPriorities(Cfg)
+	priorities := jira.GetPriorities()
 
 	fmt.Println("Choose issue priority:")
 
@@ -105,7 +103,7 @@ func getUserInputPriority() (string, string) {
 	}
 
 	r := fmt.Sprintf("^([0-%d])$", len(priorities)-1)
-	index := getUserInput("", r)
+	index := util.GetUserInput("", r)
 
 	x, _ := strconv.Atoi(index)
 
@@ -131,7 +129,7 @@ func getUserInputIssueType(project types.Project) (string, string) {
 		r = fmt.Sprintf("^([0-9][0-%d]?)$", len(project.IssueTypes)-11)
 	}
 
-	index := getUserInput("", r)
+	index := util.GetUserInput("", r)
 
 	x, _ := strconv.Atoi(index)
 
@@ -175,7 +173,7 @@ func getUserInputDescription() (string, string) {
 		os.Exit(1)
 	}
 
-	escaped := makeStringJSONSafe(string(desc))
+	escaped := util.MakeStringJSONSafe(string(desc))
 
 	return escaped, string(desc)
 }
@@ -186,7 +184,7 @@ func getUserInputConfirmOk(project types.Project, issueType, pri, summary, descr
 	fmt.Printf("Summary: %s\n", summary)
 	fmt.Printf("Description:\n%s\n", description)
 
-	ans := getUserInput("Is this correct [y/N]: ", "[y|n]")
+	ans := util.GetUserInput("Is this correct [y/N]: ", "[y|n]")
 	if ans == "y" {
 		return true
 	}
@@ -194,53 +192,4 @@ func getUserInputConfirmOk(project types.Project, issueType, pri, summary, descr
 	fmt.Println("Cancelled by user")
 
 	return false
-}
-
-func createNewIssue(project types.Project, issueTypeID,
-	priorityID, summary, description string) (string, error) {
-	url := Cfg.JiraURL + "/rest/api/2/issue"
-	method := "POST"
-
-	payload := []byte(`{
-		"fields":{
-			"project": {
-				"id": "` + project.ID + `"
-			},
-			"summary": "` + summary + `",
-			"description": "` + description + `",
-			"issuetype": {
-				"id": "` + issueTypeID + `"
-			},
-			"priority": {
-				"id": "` + priorityID + `"
-			}
-		}
-	}`)
-
-	// If issueType is Task or Improvement add the
-	// Change visibility to Exclude change in release notes
-	if issueTypeID == "3" || issueTypeID == "4" {
-		re := regexp.MustCompile(`},(\n|.)+?"summary"`)
-		payload = re.ReplaceAll(payload, []byte(`},
-				"customfield_10707": {
-					"value": "Exclude change in release notes"
-				},
-				"summary"`))
-	}
-
-	body, err := update(method, url, payload)
-	if err != nil {
-		return string(body), err
-	}
-
-	var resp struct {
-		Key string `json:"key"`
-	}
-
-	err = json.Unmarshal(body, &resp)
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-
-	return resp.Key, nil
 }

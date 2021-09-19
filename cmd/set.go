@@ -89,7 +89,7 @@ func init() {
 }
 
 func setActiveIssue(key string) {
-	issues := jira.GetIssues(Cfg, "key = "+key)
+	issues := jira.GetIssues("key = " + key)
 	if len(issues) != 1 {
 		fmt.Printf("Issue %s does not exist, and can not be set active\n", key)
 		os.Exit(1)
@@ -112,7 +112,7 @@ func setActiveIssue(key string) {
 }
 
 func setActiveBoard(board string) {
-	if id := jira.GetRapidViewID(Cfg, board); id == nil {
+	if id := jira.GetRapidViewID(board); id == nil {
 		fmt.Printf("Board %s does not exist, and can not be set active\n", board)
 		os.Exit(1)
 	}

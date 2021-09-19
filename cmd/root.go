@@ -36,6 +36,7 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 
+	"gitlab.com/mhersson/gojira/pkg/jira"
 	"gitlab.com/mhersson/gojira/pkg/types"
 )
 
@@ -131,6 +132,8 @@ func initConfig() {
 		revs := runGit([]string{"ls-remote", GojiraRepository})
 		getLatestRevision(revs)
 	}
+
+	jira.Configure(Cfg.JiraURL, Cfg.Username, Cfg.Password)
 }
 
 func getHomeFolder() string {

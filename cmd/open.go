@@ -55,7 +55,7 @@ var openCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		validate.IssueKey(&IssueKey, IssueFile)
 		openbrowser(Cfg.JiraURL + "/browse/" + IssueKey)
 	},
 }

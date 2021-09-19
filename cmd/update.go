@@ -22,20 +22,12 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"bufio"
-	"bytes"
-	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/mhersson/gojira/pkg/jira"
-	"gitlab.com/mhersson/gojira/pkg/types"
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
@@ -86,13 +78,13 @@ var updateStatusCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		validate.IssueKey(&IssueKey, IssueFile)
 		status := getStatus(IssueKey)
 		printStatus(status, false)
-		tr := jira.GetTransistions(Cfg, IssueKey)
+		tr := jira.GetTransistions(IssueKey)
 		printTransitions(tr)
 		if len(tr) >= 1 {
-			err := updateStatus(IssueKey, tr)
+			err := jira.UpdateStatus(IssueKey, tr)
 			if err != nil {
 				fmt.Printf("Update failed: %s", err.Error())
 				os.Exit(1)
@@ -112,13 +104,13 @@ var updateAssigneeCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
+		validate.IssueKey(&IssueKey, IssueFile)
 
 		if Assignee == "" {
 			Assignee = Cfg.Username
 		}
 
-		err := updateAssignee(IssueKey, Assignee)
+		err := jira.UpdateAssignee(IssueKey, Assignee)
 		if err != nil {
 			fmt.Printf("Failed to update assignee - %s\n", err.Error())
 			os.Exit(1)
@@ -129,7 +121,7 @@ var updateAssigneeCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(editCmd)
+	rootCmd.AddCommand(updateCmd)
 
 	updateCmd.AddCommand(updateStatusCmd)
 	updateCmd.AddCommand(updateAssigneeCmd)
@@ -139,114 +131,4 @@ func init() {
 
 	updateAssigneeCmd.PersistentFlags().StringVarP(&Assignee,
 		"username", "u", "", "username of the new assignee")
-}
-
-func getUserInput(prompt string, regRange string) string {
-	if prompt == "" {
-		fmt.Print("\nPlease enter value (press enter to quit): ")
-	} else {
-		fmt.Print(prompt)
-	}
-
-	reader := bufio.NewReader(os.Stdin)
-
-	var answer string
-
-	for {
-		input, _ := reader.ReadBytes('\n')
-		if input[0] == '\n' {
-			fmt.Println("Cancelled by user")
-			os.Exit(0)
-		}
-
-		re := regexp.MustCompile(regRange)
-		m := re.Find(bytes.TrimSpace(input))
-
-		if m == nil {
-			fmt.Println("Invalid choice")
-			fmt.Print("Please try again: ")
-
-			continue
-		}
-
-		answer = string(m)
-
-		break
-	}
-
-	return answer
-}
-
-func updateStatus(key string, transitions []types.Transition) error {
-	r := fmt.Sprintf("^([0-%d])$", len(transitions)-1)
-	index := getUserInput("", r)
-
-	i, err := strconv.Atoi(index)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
-	id := transitions[i].ID
-
-	payload := []byte(`{
-		"update": {
-			"comment": [
-				{
-					"add": {
-						"body": "Status updated by Gojira"
-					}
-				}
-			]
-		},
-		"transition": {
-			"id": "` + id + `"
-		}
-	}`)
-
-	resp, err := update("POST", url, payload)
-	if err != nil {
-		fmt.Printf("%s\n", resp)
-
-		return err
-	}
-
-	return nil
-}
-
-func updateAssignee(key string, user string) error {
-	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
-	payload := []byte(`{"name":"` + user + `"}`)
-
-	resp, err := update("PUT", url, payload)
-	if err != nil {
-		fmt.Printf("%s\n", resp)
-
-		return err
-	}
-
-	return nil
-}
-
-func update(method, url string, payload []byte) ([]byte, error) {
-	ctx := context.Background()
-	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(Cfg.Username, Cfg.Password)
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
-		return body, &types.Error{Message: resp.Status}
-	}
-
-	return body, nil
 }

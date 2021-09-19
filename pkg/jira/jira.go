@@ -30,6 +30,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,11 +39,21 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/util"
 )
 
-func GetIssues(config types.Config, filter string) []types.Issue {
-	url := config.JiraURL + "/rest/api/2/search"
+var server string
+var username string
+var password string
+
+func Configure(jiraURL, jiraUser, jiraPassword string) {
+	server = jiraURL
+	username = jiraUser
+	password = jiraPassword
+}
+
+func GetIssues(filter string) []types.Issue {
+	url := server + "/rest/api/2/search"
 
 	if filter == "" {
-		filter = `assignee = ` + config.Username +
+		filter = `assignee = ` + username +
 			` AND resolution = Unresolved order by priority, updated`
 	} else {
 		filter += " order by priority, updated"
@@ -63,127 +75,127 @@ func GetIssues(config types.Config, filter string) []types.Issue {
 		Issues []types.Issue `json:"issues"`
 	})
 
-	getJSONResponse(config, "POST", url, payload, jsonResponse)
+	getJSONResponse("POST", url, payload, jsonResponse)
 
 	return jsonResponse.Issues
 }
 
-func GetTimesheet(config types.Config, date string, showEntireWeek bool) []types.Timesheet {
-	url := config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date + "&endDate=" + date
+func GetTimesheet(date string, showEntireWeek bool) []types.Timesheet {
+	url := server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date + "&endDate=" + date
 
 	if showEntireWeek {
 		// Date is already validated, so should be safe
 		// to drop the error check here
 		t, _ := time.Parse("2006-01-02", date)
 		start, end := util.WeekStartEndDate(t.ISOWeek())
-		url = config.JiraURL + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
+		url = server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
 	}
 
 	jsonResponse := new(struct {
 		Worklog []types.Timesheet `json:"worklog"`
 	})
 
-	getJSONResponse(config, http.MethodGet, url, nil, jsonResponse)
+	getJSONResponse(http.MethodGet, url, nil, jsonResponse)
 
 	return jsonResponse.Worklog
 }
 
-func GetValidProjectsAndIssueType(config types.Config) types.IssueCreateMeta {
-	url := config.JiraURL + "/rest/api/2/issue/createmeta"
+func GetValidProjectsAndIssueType() types.IssueCreateMeta {
+	url := server + "/rest/api/2/issue/createmeta"
 
 	jsonResponse := &types.IssueCreateMeta{}
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return *jsonResponse
 }
 
-func GetPriorities(config types.Config) []types.Priority {
-	url := config.JiraURL + "/rest/api/2/priority"
+func GetPriorities() []types.Priority {
+	url := server + "/rest/api/2/priority"
 
 	jsonResponse := &[]types.Priority{}
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return *jsonResponse
 }
 
-func GetIssueTypes(config types.Config) *[]types.IssueType {
-	url := config.JiraURL + "/rest/api/2/issuetype"
+func GetIssueTypes() *[]types.IssueType {
+	url := server + "/rest/api/2/issuetype"
 
 	jsonResponse := &[]types.IssueType{}
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return jsonResponse
 }
 
-func GetIssue(config types.Config, key string) types.IssueDescription {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key)
+func GetIssue(key string) types.IssueDescription {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key)
 
 	jsonResponse := &types.IssueDescription{}
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return *jsonResponse
 }
 
-func GetIssuesInEpic(config types.Config, key string) []types.Issue {
-	url := config.JiraURL + "/rest/api/2/search?jql=cf[10500]=" + strings.ToUpper(key)
+func GetIssuesInEpic(key string) []types.Issue {
+	url := server + "/rest/api/2/search?jql=cf[10500]=" + strings.ToUpper(key)
 
 	jsonResponse := new(struct {
 		Issues []types.Issue `json:"issues"`
 	})
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return jsonResponse.Issues
 }
 
-func GetTransistions(config types.Config, key string) []types.Transition {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
+func GetTransistions(key string) []types.Transition {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
 
 	jsonResponse := new(struct {
 		Transitions []types.Transition `json:"transitions"`
 	})
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return jsonResponse.Transitions
 }
 
-func GetComments(config types.Config, key string) []types.Comment {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
+func GetComments(key string) []types.Comment {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
 
 	jsonResponse := new(struct {
 		Comments []types.Comment `json:"comments"`
 	})
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return jsonResponse.Comments
 }
 
-func GetWorklogs(config types.Config, key string) []types.Worklog {
-	url := config.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
+func GetWorklogs(key string) []types.Worklog {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
 
 	jsonResponse := new(struct {
 		Worklogs []types.Worklog `json:"worklogs"`
 	})
 
-	getJSONResponse(config, "GET", url, nil, jsonResponse)
+	getJSONResponse("GET", url, nil, jsonResponse)
 
 	return jsonResponse.Worklogs
 }
 
-func GetRapidViewID(config types.Config, board string) *types.RapidView {
-	url := config.JiraURL + "/rest/greenhopper/1.0/rapidview"
+func GetRapidViewID(board string) *types.RapidView {
+	url := server + "/rest/greenhopper/1.0/rapidview"
 
 	resp := new(struct {
 		Views []types.RapidView `json:"views"`
 	})
 
-	getJSONResponse(config, http.MethodGet, url, nil, resp)
+	getJSONResponse(http.MethodGet, url, nil, resp)
 
 	for _, x := range resp.Views {
 		if strings.EqualFold(board, x.Name) {
@@ -194,27 +206,27 @@ func GetRapidViewID(config types.Config, board string) *types.RapidView {
 	return nil
 }
 
-func GetSprints(config types.Config, rapidViewID int) ([]types.Sprint, []types.SprintIssue) {
+func GetSprints(rapidViewID int) ([]types.Sprint, []types.SprintIssue) {
 	url := fmt.Sprintf(
 		"%s/rest/greenhopper/1.0/xboard/plan/backlog/data.json?rapidViewId=%d",
-		config.JiraURL, rapidViewID)
+		server, rapidViewID)
 
 	resp := new(struct {
 		Issues  []types.SprintIssue `json:"issues"`
 		Sprints []types.Sprint      `json:"sprints"`
 	})
 
-	getJSONResponse(config, http.MethodGet, url, nil, resp)
+	getJSONResponse(http.MethodGet, url, nil, resp)
 
 	return resp.Sprints, resp.Issues
 }
 
-func IssueExists(config types.Config, issueKey *string) bool {
-	url := config.JiraURL + "/rest/api/2/issue/" + *issueKey
+func IssueExists(issueKey *string) bool {
+	url := server + "/rest/api/2/issue/" + *issueKey
 	ctx := context.Background()
 	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(config.Username, config.Password)
+	req.SetBasicAuth(username, password)
 
 	client := &http.Client{}
 
@@ -227,13 +239,263 @@ func IssueExists(config types.Config, issueKey *string) bool {
 	return resp.StatusCode == 200
 }
 
-func getJSONResponse(config types.Config, method string, url string, payload []byte, jsonResponse interface{}) {
+func UpdateStatus(key string, transitions []types.Transition) error {
+	r := fmt.Sprintf("^([0-%d])$", len(transitions)-1)
+	index := util.GetUserInput("", r)
+
+	i, err := strconv.Atoi(index)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
+	id := transitions[i].ID
+
+	payload := []byte(`{
+		"update": {
+			"comment": [
+				{
+					"add": {
+						"body": "Status updated by Gojira"
+					}
+				}
+			]
+		},
+		"transition": {
+			"id": "` + id + `"
+		}
+	}`)
+
+	resp, err := update("POST", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func UpdateAssignee(key string, user string) error {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
+	payload := []byte(`{"name":"` + user + `"}`)
+
+	resp, err := update("PUT", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func CreateNewIssue(project types.Project, issueTypeID,
+	priorityID, summary, description string) (string, error) {
+	url := server + "/rest/api/2/issue"
+	method := "POST"
+
+	payload := []byte(`{
+		"fields":{
+			"project": {
+				"id": "` + project.ID + `"
+			},
+			"summary": "` + summary + `",
+			"description": "` + description + `",
+			"issuetype": {
+				"id": "` + issueTypeID + `"
+			},
+			"priority": {
+				"id": "` + priorityID + `"
+			}
+		}
+	}`)
+
+	// If issueType is Task or Improvement add the
+	// Change visibility to Exclude change in release notes
+	if issueTypeID == "3" || issueTypeID == "4" {
+		re := regexp.MustCompile(`},(\n|.)+?"summary"`)
+		payload = re.ReplaceAll(payload, []byte(`},
+				"customfield_10707": {
+					"value": "Exclude change in release notes"
+				},
+				"summary"`))
+	}
+
+	body, err := update(method, url, payload)
+	if err != nil {
+		return string(body), err
+	}
+
+	var resp struct {
+		Key string `json:"key"`
+	}
+
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
+	}
+
+	return resp.Key, nil
+}
+
+func AddWorklog(wDate, wTime, key, seconds, comment string) error {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
+	payload := []byte(`{
+		"comment": "` + comment + `",
+		"started": "` + setWorkStarttime(wDate, wTime) + `",
+		"timeSpentSeconds": ` + seconds +
+		`}`)
+
+	resp, err := update("POST", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func AddComment(key string, comment []byte) error {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
+
+	escaped := util.MakeStringJSONSafe(string(comment))
+
+	payload := []byte(`{
+		"body": "` + escaped + `",
+		"visibility": {
+			"type": "group",
+			"value": "Internal users"
+		}
+	}`)
+
+	resp, err := update("POST", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func UpdateDescription(key string, desc []byte) error {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key)
+
+	jsonDesc := util.MakeStringJSONSafe(string(desc))
+
+	payload := []byte(`{"fields":{"description":"` + jsonDesc + `"}}`)
+
+	resp, err := update("PUT", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func UpdateComment(key string, comment []byte, id string) error {
+	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment/" + id
+
+	escaped := util.MakeStringJSONSafe(string(comment))
+
+	payload := []byte(`{
+		"body": "` + escaped + `",
+		"visibility": {
+			"type": "group",
+			"value": "Internal users"
+		}
+	}`)
+
+	resp, err := update("PUT", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func UpdateWorklog(worklog types.SimplifiedTimesheet) error {
+	dateAndTime := strings.Split(worklog.StartDate, " ")
+	if len(dateAndTime) != 2 {
+		return &types.Error{Message: "invalid date and time"}
+	}
+
+	url := server + "/rest/api/2/issue/" +
+		strings.ToUpper(worklog.Key) + "/worklog/" + strconv.Itoa(worklog.ID) + "/"
+
+	payload := []byte(`{
+		"id": "` + strconv.Itoa(worklog.ID) + `",
+		"comment": "` + worklog.Comment + `",
+		"started": "` + setWorkStarttime(dateAndTime[0], dateAndTime[1]) + `",
+		"timeSpentSeconds": ` + strconv.Itoa(worklog.TimeSpent) +
+		`}`)
+
+	resp, err := update("PUT", url, payload)
+	if err != nil {
+		fmt.Printf("%s\n", resp)
+
+		return err
+	}
+
+	return nil
+}
+
+func setWorkStarttime(wDate, wTime string) string {
+	now := time.Now()
+	zone, _ := now.Zone()
+
+	// jira time format - "started": "2017-12-07T09:23:19.552+0000"
+	startTime := now.Format("2006-01-02T15:04:05.000+0000")
+
+	switch {
+	case wDate == "" && wTime == "":
+		return startTime
+	case wDate != "" && wTime == "":
+		wTime = time.Now().Format("15:04")
+	case wDate == "" && wTime != "":
+		wDate = now.Format("2006-01-02")
+	}
+
+	t, _ := time.Parse("2006-01-02 15:04 MST", fmt.Sprintf("%s %s %s", wDate, wTime, zone))
+
+	return t.UTC().Format("2006-01-02T15:04:05.000+0000")
+}
+
+func update(method, url string, payload []byte) ([]byte, error) {
+	ctx := context.Background()
+	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.SetBasicAuth(username, password)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+		return body, &types.Error{Message: resp.Status}
+	}
+
+	return body, nil
+}
+func getJSONResponse(method string, url string, payload []byte, jsonResponse interface{}) {
 	// Create request
 	ctx := context.Background()
 	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(config.Username, config.Password)
+	req.SetBasicAuth(username, password)
 
 	client := &http.Client{}
 

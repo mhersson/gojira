@@ -22,7 +22,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"embed"
 	"path"
 
 	"gitlab.com/mhersson/gojira/pkg/types"
@@ -50,6 +49,3 @@ var Cfg types.Config
 
 // ShowEntireWeek is used by myworklog.
 var ShowEntireWeek = false
-
-//go:embed templates/*.tmpl
-var TemplateFS embed.FS

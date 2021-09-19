@@ -22,11 +22,8 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -86,8 +83,8 @@ var editDescrptionCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
-		issue := jira.GetIssue(Cfg, IssueKey)
+		validate.IssueKey(&IssueKey, IssueFile)
+		issue := jira.GetIssue(IssueKey)
 
 		desc, err := captureInputFromEditor(issue.Fields.Description, "description*")
 		if err != nil {
@@ -95,7 +92,7 @@ var editDescrptionCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = updateDescription(IssueKey, desc)
+		err = jira.UpdateDescription(IssueKey, desc)
 		if err != nil {
 			fmt.Printf("Failed to update description, %v\n", err)
 			os.Exit(1)
@@ -121,19 +118,19 @@ var editCommentCmd = &cobra.Command{
 			if validate.CommentID(args[0]) {
 				// Comment id is valid, the issuekey will be set to the active issue
 				commentID = args[0]
-				validate.IssueKey(Cfg, &IssueKey, IssueFile)
+				validate.IssueKey(&IssueKey, IssueFile)
 			} else {
 				// The argument is not a valid comment id, check if it
 				// is a valid issue key
 				IssueKey = strings.ToUpper(args[0])
-				validate.IssueKey(Cfg, &IssueKey, IssueFile)
+				validate.IssueKey(&IssueKey, IssueFile)
 			}
 
 		case 2:
 			// If two arguments are provided first must be the issueKey,
 			// and second must be the comment id
 			IssueKey = strings.ToUpper(args[0])
-			validate.IssueKey(Cfg, &IssueKey, IssueFile)
+			validate.IssueKey(&IssueKey, IssueFile)
 
 			commentID = args[1]
 			if !validate.CommentID(commentID) {
@@ -143,7 +140,7 @@ var editCommentCmd = &cobra.Command{
 
 		default:
 			// If no argument is provided edit the last comment of the current active issue
-			validate.IssueKey(Cfg, &IssueKey, IssueFile)
+			validate.IssueKey(&IssueKey, IssueFile)
 		}
 
 		// Get the existing comment
@@ -167,7 +164,7 @@ var editCommentCmd = &cobra.Command{
 			fmt.Println("Failed to read comment")
 		}
 
-		err = updateComment(IssueKey, comment, commentID)
+		err = jira.UpdateComment(IssueKey, comment, commentID)
 		if err != nil {
 			fmt.Printf("Failed to update comment - %s\n", err.Error())
 			os.Exit(1)
@@ -188,13 +185,13 @@ var editMyWorklogCmd = &cobra.Command{
 		}
 		if Cfg.UseTimesheetPlugin {
 			if validate.Date(date) {
-				ts := jira.GetTimesheet(Cfg, date, ShowEntireWeek)
+				ts := jira.GetTimesheet(date, ShowEntireWeek)
 				if len(ts) == 0 {
 					fmt.Println("There is nothing to edit.")
 					os.Exit(0)
 				}
 				worklogs := util.GetWorklogsSorted(ts, false)
-				out := executeInternalTemplate("edit-worklog.tmpl", worklogs)
+				out := util.ExecuteTemplate("edit-worklog.tmpl", worklogs)
 				edited, err := captureInputFromEditor(string(out), "edit-worklog-*")
 				cobra.CheckErr(err)
 				editedWorklogs := parseEditedWorklog(date, edited)
@@ -218,82 +215,13 @@ func init() {
 	editCommentCmd.SetUsageTemplate(editCommentUsage)
 }
 
-func updateDescription(key string, desc []byte) error {
-	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key)
-
-	jsonDesc := makeStringJSONSafe(string(desc))
-
-	payload := []byte(`{"fields":{"description":"` + jsonDesc + `"}}`)
-
-	resp, err := update("PUT", url, payload)
-	if err != nil {
-		fmt.Printf("%s\n", resp)
-
-		return err
-	}
-
-	return nil
-}
-
-func updateComment(key string, comment []byte, id string) error {
-	url := Cfg.JiraURL + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment/" + id
-
-	escaped := makeStringJSONSafe(string(comment))
-
-	payload := []byte(`{
-		"body": "` + escaped + `",
-		"visibility": {
-			"type": "group",
-			"value": "Internal users"
-		}
-	}`)
-
-	resp, err := update("PUT", url, payload)
-	if err != nil {
-		fmt.Printf("%s\n", resp)
-
-		return err
-	}
-
-	return nil
-}
-
-func updateWorklog(worklog types.SimplifiedTimesheet) error {
-	dateAndTime := strings.Split(worklog.StartDate, " ")
-	if len(dateAndTime) != 2 {
-		return &types.Error{Message: "invalid date and time"}
-	}
-
-	WorkDate = dateAndTime[0]
-	WorkTime = dateAndTime[1]
-
-	url := Cfg.JiraURL + "/rest/api/2/issue/" +
-		strings.ToUpper(worklog.Key) + "/worklog/" + strconv.Itoa(worklog.ID) + "/"
-
-	payload := []byte(`{
-		"id": "` + strconv.Itoa(worklog.ID) + `",
-		"comment": "` + worklog.Comment + `",
-		"started": "` + setWorkStarttime() + `",
-		"timeSpentSeconds": ` + strconv.Itoa(worklog.TimeSpent) +
-		`}`)
-
-	resp, err := update("PUT", url, payload)
-	if err != nil {
-		fmt.Printf("%s\n", resp)
-
-		return err
-	}
-
-	return nil
-}
-
 func updateChangedWorklogs(worklogs, editedWorklogs []types.SimplifiedTimesheet) {
 	success := 0
 
 	for _, e := range editedWorklogs {
 		for _, w := range worklogs {
 			if e.ID == w.ID && (e.StartDate != w.StartDate || e.TimeSpent != w.TimeSpent || e.Comment != w.Comment) {
-				err := updateWorklog(e)
+				err := jira.UpdateWorklog(e)
 				if err != nil {
 					fmt.Printf("Failed to update worklog id: %d, key; %s\n", e.ID, e.Key)
 					fmt.Printf("%v\n", err)
@@ -316,13 +244,9 @@ func addNewWorklogs(editedWorklogs []types.SimplifiedTimesheet) {
 
 	for _, e := range editedWorklogs {
 		dateAndTime := strings.Split(e.StartDate, " ")
-		if len(dateAndTime) == 2 {
-			WorkDate = dateAndTime[0]
-			WorkTime = dateAndTime[1]
-		}
 
 		if e.ID == 1 {
-			err := addWork(e.Key, strconv.Itoa(e.TimeSpent), e.Comment)
+			err := jira.AddWorklog(dateAndTime[0], dateAndTime[1], e.Key, strconv.Itoa(e.TimeSpent), e.Comment)
 			if err != nil {
 				fmt.Printf("Failed to add new worklog key; %s\n", e.Key)
 				fmt.Printf("%v\n", err)
@@ -340,7 +264,7 @@ func addNewWorklogs(editedWorklogs []types.SimplifiedTimesheet) {
 }
 
 func getComment(key, commentID string) types.Comment {
-	comments := jira.GetComments(Cfg, key)
+	comments := jira.GetComments(key)
 
 	if commentID == "" && len(comments) >= 1 {
 		return comments[len(comments)-1]
@@ -353,35 +277,6 @@ func getComment(key, commentID string) types.Comment {
 	}
 
 	return types.Comment{}
-}
-
-func executeInternalTemplate(filename string, content interface{}) []byte {
-	temp, err := TemplateFS.ReadFile(filepath.Join("templates", filename))
-	if err != nil {
-		panic(err)
-	}
-
-	t := template.Must(template.New(filepath.Base(filename)).Funcs(templateFuncMap()).Parse(string(temp)))
-
-	var buffer bytes.Buffer
-
-	err = t.Execute(&buffer, content)
-	if err != nil {
-		panic(err)
-	}
-
-	return buffer.Bytes()
-}
-
-func templateFuncMap() template.FuncMap {
-	var fns = template.FuncMap{
-		"getTime": func(date string) string {
-			return strings.Split(date, " ")[1]
-		},
-		"convertTimeSpent": convert.SecondsToHoursAndMinutes,
-	}
-
-	return fns
 }
 
 func parseEditedWorklog(date string, logs []byte) []types.SimplifiedTimesheet {

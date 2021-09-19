@@ -57,17 +57,17 @@ var describeCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		validate.IssueKey(Cfg, &IssueKey, IssueFile)
-		issue := jira.GetIssue(Cfg, IssueKey)
+		validate.IssueKey(&IssueKey, IssueFile)
+		issue := jira.GetIssue(IssueKey)
 
 		var epic types.IssueDescription
 		if issue.Fields.Epic != "" {
-			epic = jira.GetIssue(Cfg, issue.Fields.Epic)
+			epic = jira.GetIssue(issue.Fields.Epic)
 		}
 
 		var issues []types.Issue
 		if issue.Fields.IssueType.Name == "Epic" {
-			issues = jira.GetIssuesInEpic(Cfg, issue.Key)
+			issues = jira.GetIssuesInEpic(issue.Key)
 		}
 
 		printIssue(issue, epic)
