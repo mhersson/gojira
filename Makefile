@@ -31,6 +31,8 @@ fmt:
 vet:
 	go vet ./...
 
+test: fmt vet
+	go test ./... -coverprofile cover.out
 lint:
 	@golangci-lint run ./... --enable-all \
 --disable gochecknoinits,gochecknoglobals,gomnd,gofumpt,\

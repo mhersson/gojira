@@ -33,13 +33,13 @@ import (
 )
 
 func Date(date string) bool {
-	re := regexp.MustCompile("202[0-9]-((0[1-9])|(1[0-2]))-((0[1-9])|([1-2][0-9])|(3[0-1]))")
+	re := regexp.MustCompile("^202[0-9]-((0[1-9])|(1[0-2]))-((0[1-9])|([1-2][0-9])|(3[0-1]))$")
 
 	return re.MatchString(date)
 }
 
 func Time(time string) bool {
-	re := regexp.MustCompile("([0-1][0-9]|2[0-3]):[0-5][0-9]")
+	re := regexp.MustCompile("^([0-1][0-9]|2[0-3]):[0-5][0-9]$")
 
 	return re.MatchString(time)
 }

@@ -29,29 +29,21 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/types"
 )
 
-func DurationStringToSeconds(args string) (string, error) {
+func DurationStringToSeconds(duration string) (string, error) {
 	// Format 0.5h OR 30m alone or 1h 30m combined
 	re := regexp.MustCompile(`((([0-9.]{1,})(h))?\s?(([0-6]?[0-9])(m))?)`)
-	m := re.FindStringSubmatch(args)
+	m := re.FindStringSubmatch(duration)
 
 	var seconds float64
 
-	if m != nil {
+	if m[0] != "" {
 		if m[3] != "" {
-			num, err := strconv.ParseFloat(m[3], 64)
-			if err != nil {
-				return "", fmt.Errorf("%w", err)
-			}
-
+			num, _ := strconv.ParseFloat(m[3], 64)
 			seconds += num * 3600
 		}
 
 		if m[6] != "" {
-			num, err := strconv.ParseFloat(m[6], 64)
-			if err != nil {
-				return "", fmt.Errorf("%w", err)
-			}
-
+			num, _ := strconv.ParseFloat(m[6], 64)
 			seconds += num * 60
 		}
 
