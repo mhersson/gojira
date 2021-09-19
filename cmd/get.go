@@ -234,15 +234,24 @@ var getMyWorklogCmd = &cobra.Command{
 		if validateDate(date) {
 			if config.UseTimesheetPlugin {
 				worklogs := getTimesheet(date)
+
+				if len(worklogs) == 0 && dateIsToday(date) {
+					fmt.Println("You havn't logged any hours today.")
+					os.Exit(0)
+				}
+
 				printTimesheet(worklogs)
 			} else {
 				issues := getIssues("worklogDate = " + date +
 					" AND worklogAuthor = currentUser()")
 
+				if len(issues) == 0 && dateIsToday(date) {
+					fmt.Println("You havn't logged any hours today.")
+					os.Exit(0)
+				}
+
 				myIssues := getUserTimeOnIssueAtDate(config.Username, date, issues)
-
 				printMyWorklog(myIssues)
-
 			}
 		}
 	},
@@ -884,4 +893,17 @@ func printSprintIssues(sprint *Sprint, issues []SprintIssue, issueTypes []IssueT
 			}
 		}
 	}
+}
+
+func dateIsToday(date string) bool {
+	d, err := time.Parse("2006-01-02", date)
+	cobra.CheckErr(err)
+
+	t := time.Now()
+
+	if d.Year() == t.Year() && d.Month() == t.Month() && d.Day() == t.Day() {
+		return true
+	}
+
+	return false
 }

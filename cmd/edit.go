@@ -188,12 +188,17 @@ var editMyWorklogCmd = &cobra.Command{
 		if config.UseTimesheetPlugin {
 			if validateDate(date) {
 				ts := getTimesheet(date)
+				if len(ts) == 0 {
+					fmt.Println("There is nothing to edit.")
+					os.Exit(0)
+				}
 				worklogs := getWorklogsSorted(ts, false)
 				out := executeInternalTemplate("edit-worklog.tmpl", worklogs)
 				edited, err := captureInputFromEditor(string(out), "edit-worklog-*")
 				cobra.CheckErr(err)
 				editedWorklogs := parseEditedWorklog(date, edited)
 				updateChangedWorklogs(worklogs, editedWorklogs)
+				addNewWorklogs(editedWorklogs)
 			}
 		} else {
 			fmt.Println("This command is currently only supported with the timesheet plugin enabled")
@@ -305,6 +310,34 @@ func updateChangedWorklogs(worklogs, editedWorklogs []SimplifiedTimesheet) {
 	}
 }
 
+func addNewWorklogs(editedWorklogs []SimplifiedTimesheet) {
+	success := 0
+
+	for _, e := range editedWorklogs {
+		dateAndTime := strings.Split(e.StartDate, " ")
+		if len(dateAndTime) == 2 {
+			workDate = dateAndTime[0]
+			workTime = dateAndTime[1]
+		}
+
+		if e.ID == 1 {
+			err := addWork(e.Key, strconv.Itoa(e.TimeSpent), e.Comment)
+			if err != nil {
+				fmt.Printf("Failed to add new worklog key; %s\n", e.Key)
+				fmt.Printf("%v\n", err)
+				os.Exit(1)
+			}
+			success++
+
+			break
+		}
+	}
+
+	if success >= 1 {
+		fmt.Printf("Successfully added %d worklog entries\n", success)
+	}
+}
+
 func validateCommentID(commentID string) bool {
 	// This maybe wrong, but so far I have not
 	// seen an id which is not 6 digits long
@@ -345,8 +378,11 @@ func templateFuncMap() template.FuncMap {
 func parseEditedWorklog(date string, logs []byte) []SimplifiedTimesheet {
 	// (#123456)    ISSUE-1       14:30    0h 30m    Some comment
 	re := regexp.MustCompile(
-		`\(#([0-9]{6})\)\s{1,}([A-Z]{2,9}-[0-9]{1,4})\s{1,}` +
-			`(([0-1][0-9]|2[0-3]):[0-5][0-9])\s{1,}(([0-9.]{1,}h)?\s?([0-6]?[0-9]m)?)\s*([A-Za-z0-9,\s]+)`)
+		`\(#?([0-9]{6}|new)\)\s{1,}` + // ID
+			`([A-Z]{2,9}-[0-9]{1,4})\s{1,}` + // Key
+			`(([0-1][0-9]|2[0-3]):[0-5][0-9])\s{1,}` + // Time
+			`(([0-9.]{1,}h)?\s?([0-6]?[0-9]m)?)\s*` + // Duration
+			`([A-Za-z0-9,\s]+)`) // Comment
 
 	m := re.FindAllStringSubmatch(string(logs), -1)
 
@@ -354,7 +390,12 @@ func parseEditedWorklog(date string, logs []byte) []SimplifiedTimesheet {
 
 	for _, match := range m {
 		ts := new(SimplifiedTimesheet)
-		ts.ID, _ = strconv.Atoi(match[1])
+		if match[1] == "new" {
+			ts.ID = 1
+		} else {
+			ts.ID, _ = strconv.Atoi(match[1])
+		}
+
 		ts.Key = match[2]
 		ts.StartDate = date + " " + match[3]
 
