@@ -268,11 +268,10 @@ var getSprintCMD = &cobra.Command{
 			issueTypes := jira.GetIssueTypes()
 			priorities := jira.GetPriorities()
 			sprints, issues := jira.GetSprints(rapidView.ID)
-			for _, sprint := range getActiveOrLatestSprint(sprints) {
-
-				fmt.Println(format.SprintHeader(*sprint))
-
-				printSprintIssues(sprint, issues, *issueTypes, priorities)
+			for i := range sprints {
+				sprint := sprints[i]
+				fmt.Println(format.SprintHeader(sprint))
+				printSprintIssues(&sprint, issues, *issueTypes, priorities)
 			}
 		} else {
 			fmt.Printf("%s does not exist or sprint support is not enabled\n", args[0])
@@ -323,29 +322,6 @@ func getSummary(key string) string {
 	}
 
 	return issues[0].Fields.Summary
-}
-
-func getActiveOrLatestSprint(sprints []types.Sprint) []*types.Sprint {
-	active := []*types.Sprint{}
-
-	for x := range sprints {
-		if sprints[x].State == "ACTIVE" {
-			active = append(active, &sprints[x])
-		}
-	}
-
-	if len(active) > 0 {
-		return active
-	}
-
-	// If none of the sprints are active return the most recent
-	if len(sprints) > 0 {
-		active = append(active, &sprints[len(sprints)-1])
-
-		return active
-	}
-
-	return active
 }
 
 func getUserTimeOnIssueAtDate(user, date string, issues []types.Issue) []types.TimeSpentUserIssue {
