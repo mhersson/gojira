@@ -228,13 +228,13 @@ var getMyWorklogCmd = &cobra.Command{
 		}
 		if validate.Date(date) {
 			if Cfg.UseTimesheetPlugin {
-				worklogs := jira.GetTimesheet(date, ShowEntireWeek)
-
-				if len(worklogs) == 0 && util.DateIsToday(date) {
+				ts := jira.GetTimesheet(date, ShowEntireWeek)
+				if len(ts) == 0 && util.DateIsToday(date) {
 					fmt.Println("You havn't logged any hours today.")
 					os.Exit(0)
 				}
 
+				worklogs := util.GetWorklogsSorted(ts, true)
 				printTimesheet(worklogs)
 			} else {
 				issues := jira.GetIssues("worklogDate = " + date +
@@ -490,22 +490,20 @@ func printMyWorklog(ti []types.TimeSpentUserIssue) {
 	}
 }
 
-func printTimesheet(worklogs []types.Timesheet) {
+func printTimesheet(worklogs []types.SimplifiedTimesheet) {
 	if len(worklogs) >= 1 {
-		week := util.GetWorklogsSorted(worklogs, true)
-
-		fmt.Printf("%s%s\n%-12s%-15s%-44s%-35s%s%s\n", format.Color.Ul, format.Color.Yellow,
-			"Date", "Key", "Summary", "Comment", "Time Spent", format.Color.Nocolor)
+		fmt.Printf("%s%s\n%-11s%-7s%-15s%-44s%-33s%9s%s\n", format.Color.Ul, format.Color.Yellow,
+			"Date", "Time", "Key", "Summary", "Comment", "Time Spent", format.Color.Nocolor)
 
 		total := 0
-		for _, w := range week {
+		for _, w := range worklogs {
 			total += w.TimeSpent
-			fmt.Printf("%-12s%-15s%-44s%-35s%s\n",
-				w.Date, w.Key, w.Summary, w.Comment, convert.SecondsToHoursAndMinutes(w.TimeSpent, false))
+			fmt.Printf("%-18s%-15s%-44s%-33s%9s\n",
+				w.StartDate, w.Key, w.Summary, w.Comment, convert.SecondsToHoursAndMinutes(w.TimeSpent, false))
 		}
 
-		fmt.Printf("%s%sTotal time spent:%s %s%s\n",
-			strings.Repeat(" ", 88), format.Color.Ul, format.Color.Nocolor,
+		fmt.Printf("%s%sTotal time spent: %11s%s\n",
+			strings.Repeat(" ", 90), format.Color.Ul,
 			convert.SecondsToHoursAndMinutes(total, false), format.Color.Nocolor)
 	} else {
 		fmt.Println("You have not logged any hours on this date")

@@ -148,7 +148,7 @@ func GetWorklogsSorted(worklogs []types.Timesheet, truncate bool) []types.Simpli
 	}
 
 	sort.Slice(week, func(i, j int) bool {
-		return week[i].Date < week[j].Date
+		return week[i].StartDate < week[j].StartDate
 	})
 
 	return week

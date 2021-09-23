@@ -469,7 +469,7 @@ func setWorkStarttime(wDate, wTime string) string {
 	zone, _ := now.Zone()
 
 	// jira time format - "started": "2017-12-07T09:23:19.552+0000"
-	startTime := now.Format("2006-01-02T15:04:05.000+0000")
+	startTime := now.UTC().Format("2006-01-02T15:04:05.000+0000")
 
 	switch {
 	case wDate == "" && wTime == "":
