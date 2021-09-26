@@ -42,6 +42,7 @@ func TestDurationStringToSeconds(t *testing.T) {
 		{"0.5h", "1800", nil},
 		{"05m", "300", nil},
 		{"5m", "300", nil},
+		{"85m", "5100", nil},
 		{"5x", "", &types.Error{}},
 		{"Wrong", "", &types.Error{}},
 	}

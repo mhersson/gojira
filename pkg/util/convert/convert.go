@@ -31,7 +31,7 @@ import (
 
 func DurationStringToSeconds(duration string) (string, error) {
 	// Format 0.5h OR 30m alone or 1h 30m combined
-	re := regexp.MustCompile(`((([0-9.]{1,})(h))?\s?(([0-6]?[0-9])(m))?)`)
+	re := regexp.MustCompile(`((([0-9.]{1,})(h))?\s?(([0-9]?[0-9])(m))?)`)
 	m := re.FindStringSubmatch(duration)
 
 	var seconds float64
