@@ -179,7 +179,7 @@ func GroupWorklogsByWeek(
 
 		for _, h := range holidays {
 			d, _ := time.Parse("2006-01-02", h)
-			if (t1.Before(d) || t1.Equal(d)) && (t1.Equal(d) || t1.Add(7*24*time.Hour).After(d)) {
+			if (t1.Before(d) || t1.Equal(d)) && (t1.Equal(d) || t1.Add(5*24*time.Hour).After(d)) {
 				week.PublicHolidays++
 			}
 		}
