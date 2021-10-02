@@ -36,6 +36,7 @@ type Config struct {
 	NumWorkingDays      int     `yaml:"numberOfWorkingDays"`
 	WorkingHoursPerDay  float64 `yaml:"numberOfWorkingHoursPerDay"`
 	WorkingHoursPerWeek float64 `yaml:"numberOfWorkingHoursPerWeek"`
+	CountryCode         string  `yaml:"countryCode"`
 }
 
 type Error struct {
@@ -313,9 +314,10 @@ type TimeStat struct {
 }
 
 type Week struct {
-	StartDate time.Time
-	EndDate   time.Time
-	Worklogs  []SimplifiedTimesheet
+	StartDate      time.Time
+	EndDate        time.Time
+	PublicHolidays int
+	Worklogs       []SimplifiedTimesheet
 }
 
 func inSlice(slice []string, s string) bool {
@@ -360,4 +362,10 @@ func (w *Week) Average() float64 {
 	}
 
 	return w.TotalTime() / float64(w.WorkDays())
+}
+
+type PublicHoliday struct {
+	Date        string `json:"date"`
+	Name        string `json:"name"`
+	CountryCode string `json:"countryCode"`
 }

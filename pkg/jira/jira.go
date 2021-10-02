@@ -507,6 +507,7 @@ func update(method, url string, payload []byte) ([]byte, error) {
 
 	return body, nil
 }
+
 func query(method string, url string, payload []byte, jsonResponse interface{}) {
 	// Create request
 	ctx := context.Background()

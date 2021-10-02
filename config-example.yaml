@@ -33,3 +33,6 @@ checkForUpdates: true
 
 # The number of working hours in a normal week (default 37.5)
 # numberOfWorkingHoursPerWeek: 37.5
+
+# The two letter country code to use when looking up public holidays
+countryCode: "NO"

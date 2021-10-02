@@ -22,8 +22,10 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -307,7 +309,17 @@ var getMyWorklogStatistics = &cobra.Command{
 			}
 
 			worklogs := util.GetWorklogsSorted(ts, true)
-			weeks := util.GroupWorklogsByWeek(fromDate, toDate, worklogs)
+
+			if _, err := os.Stat(CacheFolder); errors.Is(err, os.ErrNotExist) {
+				_ = os.Mkdir(CacheFolder, 0755)
+			}
+
+			publicHolidays := util.LoadPublicHolidays(
+				filepath.Join(CacheFolder, "public-holidays-"+t1.Format("2006")+"-"+Cfg.CountryCode+".json"),
+				t1.Format("2006"),
+				Cfg.CountryCode)
+
+			weeks := util.GroupWorklogsByWeek(fromDate, toDate, worklogs, util.GetPublicHolidayDates(publicHolidays))
 
 			printStatistics(weeks)
 		} else {
@@ -579,17 +591,18 @@ func printTimesheet(worklogs []types.SimplifiedTimesheet) {
 
 func printStatistics(weeks []types.Week) {
 	if len(weeks) > 0 {
-		fmt.Printf("%s%s\n%-9s%-11s%-12s%-15s%-5s%15s%s\n", format.Color.Ul, format.Color.Yellow,
-			"Week#", "Start", "End", "Workdays", "Average", "Total", format.Color.Nocolor)
+		fmt.Printf("%s%s\n%-9s%-11s%-12s%-12s%-12s%-5s%10s%s\n", format.Color.Ul, format.Color.Yellow,
+			"Week#", "Start", "End", "Workdays", "Holidays", "Average", "Total", format.Color.Nocolor)
 
 		for _, week := range weeks {
 			avg := format.StatsAverage(week.Average(), Cfg.WorkingHoursPerDay)
-			tot := format.StatsTotal(week.TotalTime(), Cfg.WorkingHoursPerWeek)
-			days := format.StatsWorkdays(week.WorkDays(), Cfg.NumWorkingDays)
+			tot := format.StatsTotal(week.TotalTime(), Cfg.WorkingHoursPerWeek, Cfg.WorkingHoursPerDay, week.PublicHolidays)
+			days := format.StatsWorkdays(week.WorkDays(), Cfg.NumWorkingDays, week.PublicHolidays)
+			holidays := format.StatsHolidays(week.PublicHolidays)
 
-			fmt.Printf(" %-8d%-10s%-16s%-23s%-20s%18s\n",
+			fmt.Printf(" %-8d%-10s%-16s%-21s%-20s%-15s%18s\n",
 				week.Number(), week.StartDate.Format("01/02"), week.EndDate.Format("01/02"),
-				days, avg, tot)
+				days, holidays, avg, tot)
 		}
 	} else {
 		fmt.Println("There are no hours registered for this period")

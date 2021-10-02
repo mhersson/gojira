@@ -119,6 +119,7 @@ func initConfig() {
 		Cfg.NumWorkingDays = viper.GetInt("numberOfWorkingDays")
 		Cfg.WorkingHoursPerDay = viper.GetFloat64("numberOfWorkingHoursPerDay")
 		Cfg.WorkingHoursPerWeek = viper.GetFloat64("numberOfWorkingHoursPerWeek")
+		Cfg.CountryCode = viper.GetString("countryCode")
 
 		if Cfg.JiraURL[len(Cfg.JiraURL)-1:] == "/" {
 			Cfg.JiraURL = Cfg.JiraURL[:len(Cfg.JiraURL)-1]

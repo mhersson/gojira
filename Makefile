@@ -4,7 +4,7 @@
 
 SHELL=bash
 
-VERSION=0.7.0
+VERSION=0.7.1
 REPOSITORY="https://gitlab.com/mhersson/gojira.git"
 
 # make will interpret non-option arguments in the command line as targets.

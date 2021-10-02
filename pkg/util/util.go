@@ -25,11 +25,14 @@ package util
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -155,7 +158,7 @@ func GetWorklogsSorted(worklogs []types.Timesheet, truncate bool) []types.Simpli
 }
 
 func GroupWorklogsByWeek(
-	fromDate, toDate string, worklogs []types.SimplifiedTimesheet) []types.Week {
+	fromDate, toDate string, worklogs []types.SimplifiedTimesheet, holidays []string) []types.Week {
 	t1, _ := time.Parse("2006-01-02", fromDate)
 	t2, _ := time.Parse("2006-01-02", toDate)
 
@@ -171,6 +174,13 @@ func GroupWorklogsByWeek(
 				week.Worklogs = append(week.Worklogs, w)
 			} else if d.After(t1.Add(6 * 24 * time.Hour)) {
 				break
+			}
+		}
+
+		for _, h := range holidays {
+			d, _ := time.Parse("2006-01-02", h)
+			if (t1.Before(d) || t1.Equal(d)) && (t1.Equal(d) || t1.Add(7*24*time.Hour).After(d)) {
+				week.PublicHolidays++
 			}
 		}
 
@@ -269,4 +279,60 @@ func templateFuncMap() template.FuncMap {
 	}
 
 	return fns
+}
+
+func LoadPublicHolidays(filename, year, countryCode string) []types.PublicHoliday {
+	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+		data := HTTPGet("https://date.nager.at/api/v3/publicholidays/" + year + "/" + strings.ToUpper(countryCode))
+
+		err := os.WriteFile(filename, data, 0600)
+		if err != nil {
+			fmt.Printf("Failed to write public holidays to cache - %v\n", err)
+		}
+	}
+
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		fmt.Printf("Failed to load public holidays - %v\n", err)
+	}
+
+	publicHolidays := []types.PublicHoliday{}
+
+	err = json.Unmarshal(data, &publicHolidays)
+	if err != nil {
+		fmt.Printf("Failed to parse public holidays - %v\n", err)
+	}
+
+	return publicHolidays
+}
+
+func GetPublicHolidayDates(publicHolidays []types.PublicHoliday) []string {
+	dates := []string{}
+	for _, h := range publicHolidays {
+		dates = append(dates, h.Date)
+	}
+
+	return dates
+}
+
+func HTTPGet(url string) []byte {
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Request failed: %v\n", err)
+
+		return []byte{}
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
+	return body
 }
