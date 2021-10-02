@@ -16,7 +16,7 @@ passwordtype: plain
 
 
 # Set this to true if the timesheet plugin is installed on the server
-# Can really improve the speed on some commands, espesially worklog queries.
+# https://www.primetimesheet.net/wiki/Overview.html
 useTimesheetPlugin: true
 
 # When set to true Gojira will issue a git ls-remote towards the Gojira repository
