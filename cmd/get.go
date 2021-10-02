@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -95,14 +96,33 @@ const myWorklogUsage string = `This command will show the issues you have worked
 and the hours you have logged on a given date.
 
 Usage:
-  gojira myworklog [yyyy-mm-dd] [flags]
+  gojira get myworklog [yyyy-mm-dd] [flags]
+  gojira get myworklog stats [yyyy-mm-dd] [yyyy-mm-dd]
+
+Available Commands:
+  stats       Display you worklog statistics
 
 Aliases:
-  myworklog
+  myworklog, m
 
 Flags:
   -h, --help                   help for myworklog
   -w, --week                   current week (only with timesheet plugin)
+`
+
+const myWorklogStatisticsUsage string = `Shows per week worklog statistics for a given period.
+Aligns the week numbers to the dates entered,
+and calculates the average and total amount of hours per week.
+
+
+Usage:
+  gojira get myworklog stats [yyyy-mm-dd] [yyyy-mm-dd]
+
+Aliases:
+  stats, s
+
+Flags:
+  -h, --help                   help for myworklog
 `
 
 const getSprintUsage string = `
@@ -229,7 +249,7 @@ var getMyWorklogCmd = &cobra.Command{
 		}
 		if validate.Date(date) {
 			if Cfg.UseTimesheetPlugin {
-				ts := jira.GetTimesheet(date, ShowEntireWeek)
+				ts := jira.GetTimesheet(date, date, ShowEntireWeek)
 				if len(ts) == 0 && util.DateIsToday(date) {
 					fmt.Println("You havn't logged any hours today.")
 					os.Exit(0)
@@ -249,6 +269,49 @@ var getMyWorklogCmd = &cobra.Command{
 				myIssues := getUserTimeOnIssueAtDate(Cfg.Username, date, issues)
 				printMyWorklog(myIssues)
 			}
+		}
+	},
+}
+
+var getMyWorklogStatistics = &cobra.Command{
+	Use:     "stats",
+	Short:   "Display your worklog statistics",
+	Aliases: []string{"s"},
+	Args:    cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		if !Cfg.UseTimesheetPlugin {
+			fmt.Println("This command is only available with the timesheet plugin")
+			os.Exit(1)
+		}
+		if validate.Date(args[0]) && validate.Date(args[1]) {
+			t1, _ := time.Parse("2006-01-02", args[0])
+			t2, _ := time.Parse("2006-01-02", args[1])
+			if t2.Before(t1) {
+				t := t2
+				t2 = t1
+				t1 = t
+			}
+
+			fromDate, _ := util.WeekStartEndDate(t1.ISOWeek())
+			_, toDate := util.WeekStartEndDate(t2.ISOWeek())
+
+			if t2.Sub(t1).Hours() > (24 * 365) {
+				fmt.Println("1 year is the max time period.")
+				os.Exit(1)
+			}
+
+			ts := jira.GetTimesheet(fromDate, toDate, false)
+			if len(ts) == 0 {
+				fmt.Printf("You havn't logged any hours between %s - %s\n", args[0], args[1])
+				os.Exit(0)
+			}
+
+			worklogs := util.GetWorklogsSorted(ts, true)
+			weeks := util.GroupWorklogsByWeek(fromDate, toDate, worklogs)
+
+			printStatistics(weeks)
+		} else {
+			fmt.Println("Invalid date.")
 		}
 	},
 }
@@ -301,6 +364,9 @@ func init() {
 
 	getMyWorklogCmd.SetUsageTemplate(myWorklogUsage)
 	getMyWorklogCmd.Flags().BoolVarP(&ShowEntireWeek, "week", "w", false, "view current week (only with timesheet plugin)")
+	getMyWorklogCmd.AddCommand(getMyWorklogStatistics)
+
+	getMyWorklogStatistics.SetUsageTemplate(myWorklogStatisticsUsage)
 
 	getSprintCMD.SetUsageTemplate(getSprintUsage)
 }
@@ -508,6 +574,25 @@ func printTimesheet(worklogs []types.SimplifiedTimesheet) {
 			convert.SecondsToHoursAndMinutes(total, false), format.Color.Nocolor)
 	} else {
 		fmt.Println("You have not logged any hours on this date")
+	}
+}
+
+func printStatistics(weeks []types.Week) {
+	if len(weeks) > 0 {
+		fmt.Printf("%s%s\n%-9s%-11s%-12s%-15s%-5s%15s%s\n", format.Color.Ul, format.Color.Yellow,
+			"Week#", "Start", "End", "Workdays", "Average", "Total", format.Color.Nocolor)
+
+		for _, week := range weeks {
+			avg := format.StatsAverage(week.Average(), Cfg.WorkingHoursPerDay)
+			tot := format.StatsTotal(week.TotalTime(), Cfg.WorkingHoursPerWeek)
+			days := format.StatsWorkdays(week.WorkDays(), Cfg.NumWorkingDays)
+
+			fmt.Printf(" %-8d%-10s%-16s%-23s%-20s%18s\n",
+				week.Number(), week.StartDate.Format("01/02"), week.EndDate.Format("01/02"),
+				days, avg, tot)
+		}
+	} else {
+		fmt.Println("There are no hours registered for this period")
 	}
 }
 

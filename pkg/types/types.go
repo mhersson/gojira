@@ -21,14 +21,21 @@ THE SOFTWARE.
 */
 package types
 
+import (
+	"time"
+)
+
 // var cfgFile string.
 type Config struct {
-	JiraURL            string `yaml:"JiraURL"` //nolint:tagliatelle
-	Username           string `yaml:"username"`
-	Password           string `yaml:"password"`
-	PasswordType       string `yaml:"passwordtype"`
-	UseTimesheetPlugin bool   `yaml:"useTimesheetPlugin"`
-	CheckForUpdates    bool   `yaml:"checkForUpdates"`
+	JiraURL             string  `yaml:"JiraURL"` //nolint:tagliatelle
+	Username            string  `yaml:"username"`
+	Password            string  `yaml:"password"`
+	PasswordType        string  `yaml:"passwordtype"`
+	UseTimesheetPlugin  bool    `yaml:"useTimesheetPlugin"`
+	CheckForUpdates     bool    `yaml:"checkForUpdates"`
+	NumWorkingDays      int     `yaml:"numberOfWorkingDays"`
+	WorkingHoursPerDay  float64 `yaml:"numberOfWorkingHoursPerDay"`
+	WorkingHoursPerWeek float64 `yaml:"numberOfWorkingHoursPerWeek"`
 }
 
 type Error struct {
@@ -303,4 +310,54 @@ type TimeStat struct {
 		Value float64 `json:"value"`
 		Text  string  `json:"text"`
 	} `json:"statFieldValue"`
+}
+
+type Week struct {
+	StartDate time.Time
+	EndDate   time.Time
+	Worklogs  []SimplifiedTimesheet
+}
+
+func inSlice(slice []string, s string) bool {
+	for _, a := range slice {
+		if a == s {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (w *Week) Number() int {
+	_, i := w.StartDate.ISOWeek()
+
+	return i
+}
+
+func (w *Week) WorkDays() int {
+	days := []string{}
+	for _, d := range w.Worklogs {
+		if !inSlice(days, d.Date) {
+			days = append(days, d.Date)
+		}
+	}
+
+	return len(days)
+}
+
+func (w *Week) TotalTime() float64 {
+	total := float64(0)
+	for _, d := range w.Worklogs {
+		total += float64(d.TimeSpent)
+	}
+
+	return total / 3600
+}
+
+func (w *Week) Average() float64 {
+	if w.WorkDays() == 0 {
+		return 0
+	}
+
+	return w.TotalTime() / float64(w.WorkDays())
 }

@@ -154,6 +154,35 @@ func GetWorklogsSorted(worklogs []types.Timesheet, truncate bool) []types.Simpli
 	return week
 }
 
+func GroupWorklogsByWeek(
+	fromDate, toDate string, worklogs []types.SimplifiedTimesheet) []types.Week {
+	t1, _ := time.Parse("2006-01-02", fromDate)
+	t2, _ := time.Parse("2006-01-02", toDate)
+
+	weeks := []types.Week{}
+
+	for t1.Before(t2) || t1.Equal(t2) {
+		week := types.Week{}
+
+		for _, w := range worklogs {
+			d, _ := time.Parse("2006-01-02", w.Date)
+
+			if (t1.Before(d) || t1.Equal(d)) && (t1.Equal(d) || t1.Add(7*24*time.Hour).After(d)) {
+				week.Worklogs = append(week.Worklogs, w)
+			} else if d.After(t1.Add(6 * 24 * time.Hour)) {
+				break
+			}
+		}
+
+		week.StartDate = t1
+		week.EndDate = t1.Add(6 * 24 * time.Hour)
+		weeks = append(weeks, week)
+		t1 = t1.Add(7 * 24 * time.Hour)
+	}
+
+	return weeks
+}
+
 func GetUserInput(prompt string, regRange string) string {
 	if prompt == "" {
 		fmt.Print("\nPlease enter value (press enter to quit): ")

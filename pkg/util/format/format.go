@@ -167,3 +167,48 @@ func SprintStatus(done bool) string {
 
 	return fmt.Sprintf("%sNo%s", Color.Blue, Color.Nocolor)
 }
+
+func StatsTotal(tot, goal float64) string {
+	if goal == 0 {
+		goal = 37.5
+	}
+
+	switch {
+	case tot >= goal:
+		return fmt.Sprintf("%s%.2f%s", Color.Green, tot, Color.Nocolor)
+	case tot == 0:
+		return fmt.Sprintf("%s%.2f%s", Color.Blue, tot, Color.Nocolor)
+	default:
+		return fmt.Sprintf("%s%.2f%s", Color.Red, tot, Color.Nocolor)
+	}
+}
+
+func StatsAverage(avg, goal float64) string {
+	if goal == 0 {
+		goal = 7.5
+	}
+
+	switch {
+	case avg >= goal:
+		return fmt.Sprintf("%s%.2f%s", Color.Green, avg, Color.Nocolor)
+	case avg == 0:
+		return fmt.Sprintf("%s%.2f%s", Color.Blue, avg, Color.Nocolor)
+	default:
+		return fmt.Sprintf("%s%.2f%s", Color.Red, avg, Color.Nocolor)
+	}
+}
+
+func StatsWorkdays(days, goal int) string {
+	if goal == 0 {
+		goal = 5
+	}
+
+	switch {
+	case days >= goal:
+		return fmt.Sprintf("%s%d%s", Color.Green, days, Color.Nocolor)
+	case days == 0:
+		return fmt.Sprintf("%s%d%s", Color.Blue, days, Color.Nocolor)
+	default:
+		return fmt.Sprintf("%s%d%s", Color.Red, days, Color.Nocolor)
+	}
+}

@@ -24,3 +24,12 @@ useTimesheetPlugin: true
 # This only works if gojira is built using the Makefile, and the git executable is
 # in your path
 checkForUpdates: true
+
+# The number of regular working days in a normal week (default 5)
+# numberOfWorkingDays: 5
+
+# The number of working hours in a normal day (default 7.5)
+# numberOfWorkingHoursPerDay: 7.5
+
+# The number of working hours in a normal week (default 37.5)
+# numberOfWorkingHoursPerWeek: 37.5

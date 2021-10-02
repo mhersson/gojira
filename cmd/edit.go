@@ -186,7 +186,7 @@ var editMyWorklogCmd = &cobra.Command{
 		}
 		if Cfg.UseTimesheetPlugin {
 			if validate.Date(date) {
-				ts := jira.GetTimesheet(date, ShowEntireWeek)
+				ts := jira.GetTimesheet(date, date, ShowEntireWeek)
 				if len(ts) == 0 {
 					fmt.Println("There is nothing to edit.")
 					os.Exit(0)
@@ -196,7 +196,7 @@ var editMyWorklogCmd = &cobra.Command{
 				// If mergetoday is set
 				if !util.DateIsToday(date) && MergeToday && !ShowEntireWeek {
 					date = util.Today() // Set the date today
-					ts = jira.GetTimesheet(date, ShowEntireWeek)
+					ts = jira.GetTimesheet(date, date, ShowEntireWeek)
 					wlToday := util.GetWorklogsSorted(ts, false)
 
 					// Reset the ID and the date, and append the logs on today

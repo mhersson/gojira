@@ -82,13 +82,13 @@ func GetIssues(filter string) []types.Issue {
 	return jsonResponse.Issues
 }
 
-func GetTimesheet(date string, showEntireWeek bool) []types.Timesheet {
-	url := server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + date + "&endDate=" + date
+func GetTimesheet(fromDate, toDate string, showEntireWeek bool) []types.Timesheet {
+	url := server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + fromDate + "&endDate=" + toDate
 
 	if showEntireWeek {
 		// Date is already validated, so should be safe
 		// to drop the error check here
-		t, _ := time.Parse("2006-01-02", date)
+		t, _ := time.Parse("2006-01-02", fromDate)
 		start, end := util.WeekStartEndDate(t.ISOWeek())
 		url = server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
 	}

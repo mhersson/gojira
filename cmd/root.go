@@ -116,6 +116,9 @@ func initConfig() {
 		Cfg.PasswordType = viper.GetString("passwordtype")
 		Cfg.UseTimesheetPlugin = viper.GetBool("useTimesheetPlugin")
 		Cfg.CheckForUpdates = viper.GetBool("checkForUpdates")
+		Cfg.NumWorkingDays = viper.GetInt("numberOfWorkingDays")
+		Cfg.WorkingHoursPerDay = viper.GetFloat64("numberOfWorkingHoursPerDay")
+		Cfg.WorkingHoursPerWeek = viper.GetFloat64("numberOfWorkingHoursPerWeek")
 
 		if Cfg.JiraURL[len(Cfg.JiraURL)-1:] == "/" {
 			Cfg.JiraURL = Cfg.JiraURL[:len(Cfg.JiraURL)-1]
