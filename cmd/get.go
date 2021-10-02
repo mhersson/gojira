@@ -218,9 +218,10 @@ var getWorklogCmd = &cobra.Command{
 }
 
 var getMyWorklogCmd = &cobra.Command{
-	Use:   "myworklog",
-	Short: "Display your worklog for a given date",
-	Args:  cobra.MaximumNArgs(1),
+	Use:     "myworklog",
+	Short:   "Display your worklog for a given date",
+	Args:    cobra.MaximumNArgs(1),
+	Aliases: []string{"m"},
 	Run: func(cmd *cobra.Command, args []string) {
 		date := util.GetCurrentDate()
 		if len(args) == 1 {

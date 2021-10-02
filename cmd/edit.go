@@ -69,9 +69,9 @@ Flags:
 
 var editCmd = &cobra.Command{
 	Use:     "edit",
-	Long:    "Edit comments, descriptions and your worklog",
+	Short:   "Edit comments, descriptions and your worklog",
 	Args:    cobra.NoArgs,
-	Aliases: []string{"u"},
+	Aliases: []string{"e"},
 }
 
 var editDescrptionCmd = &cobra.Command{
@@ -175,9 +175,10 @@ var editCommentCmd = &cobra.Command{
 }
 
 var editMyWorklogCmd = &cobra.Command{
-	Use:   "myworklog",
-	Short: "Edit your worklog for a given date",
-	Args:  cobra.MaximumNArgs(1),
+	Use:     "myworklog",
+	Short:   "Edit your worklog for a given date",
+	Aliases: []string{"m"},
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		date := util.GetCurrentDate()
 		if len(args) == 1 {
