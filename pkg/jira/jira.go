@@ -41,21 +41,20 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
-var server string
-var username string
-var password string
+var jcfg types.JiraConfig
 
-func Configure(jiraURL, jiraUser, jiraPassword string) {
-	server = jiraURL
-	username = jiraUser
-	password = jiraPassword
+func Configure(config types.Config) {
+	jcfg.Server = config.JiraURL
+	jcfg.Username = config.Username
+	jcfg.Password = config.Password
+	jcfg.PasswordType = config.PasswordType
 }
 
 func GetIssues(filter string) []types.Issue {
-	url := server + "/rest/api/2/search"
+	url := jcfg.Server + "/rest/api/2/search"
 
 	if filter == "" {
-		filter = `assignee = ` + username +
+		filter = `assignee = ` + jcfg.Username +
 			` AND resolution = Unresolved order by priority, updated`
 	} else {
 		filter += " order by priority, updated"
@@ -83,14 +82,14 @@ func GetIssues(filter string) []types.Issue {
 }
 
 func GetTimesheet(fromDate, toDate string, showEntireWeek bool) []types.Timesheet {
-	url := server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + fromDate + "&endDate=" + toDate
+	url := jcfg.Server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + fromDate + "&endDate=" + toDate
 
 	if showEntireWeek {
 		// Date is already validated, so should be safe
 		// to drop the error check here
 		t, _ := time.Parse("2006-01-02", fromDate)
 		start, end := util.WeekStartEndDate(t.ISOWeek())
-		url = server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
+		url = jcfg.Server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" + start + "&endDate=" + end
 	}
 
 	jsonResponse := new(struct {
@@ -103,7 +102,7 @@ func GetTimesheet(fromDate, toDate string, showEntireWeek bool) []types.Timeshee
 }
 
 func GetValidProjectsAndIssueType() types.IssueCreateMeta {
-	url := server + "/rest/api/2/issue/createmeta"
+	url := jcfg.Server + "/rest/api/2/issue/createmeta"
 
 	jsonResponse := &types.IssueCreateMeta{}
 
@@ -113,7 +112,7 @@ func GetValidProjectsAndIssueType() types.IssueCreateMeta {
 }
 
 func GetPriorities() []types.Priority {
-	url := server + "/rest/api/2/priority"
+	url := jcfg.Server + "/rest/api/2/priority"
 
 	jsonResponse := &[]types.Priority{}
 
@@ -123,7 +122,7 @@ func GetPriorities() []types.Priority {
 }
 
 func GetIssueTypes() *[]types.IssueType {
-	url := server + "/rest/api/2/issuetype"
+	url := jcfg.Server + "/rest/api/2/issuetype"
 
 	jsonResponse := &[]types.IssueType{}
 
@@ -133,7 +132,7 @@ func GetIssueTypes() *[]types.IssueType {
 }
 
 func GetIssue(key string) types.IssueDescription {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key)
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key)
 
 	jsonResponse := &types.IssueDescription{}
 
@@ -143,7 +142,7 @@ func GetIssue(key string) types.IssueDescription {
 }
 
 func GetIssuesInEpic(key string) []types.Issue {
-	url := server + "/rest/api/2/search?jql=cf[10500]=" + strings.ToUpper(key)
+	url := jcfg.Server + "/rest/api/2/search?jql=cf[10500]=" + strings.ToUpper(key)
 
 	jsonResponse := new(struct {
 		Issues []types.Issue `json:"issues"`
@@ -155,7 +154,7 @@ func GetIssuesInEpic(key string) []types.Issue {
 }
 
 func GetTransistions(key string) []types.Transition {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
 
 	jsonResponse := new(struct {
 		Transitions []types.Transition `json:"transitions"`
@@ -167,7 +166,7 @@ func GetTransistions(key string) []types.Transition {
 }
 
 func GetComments(key string) []types.Comment {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
 
 	jsonResponse := new(struct {
 		Comments []types.Comment `json:"comments"`
@@ -179,7 +178,7 @@ func GetComments(key string) []types.Comment {
 }
 
 func GetWorklogs(key string) []types.Worklog {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
 
 	jsonResponse := new(struct {
 		Worklogs []types.Worklog `json:"worklogs"`
@@ -191,7 +190,7 @@ func GetWorklogs(key string) []types.Worklog {
 }
 
 func GetRapidViewID(board string) *types.RapidView {
-	url := server + "/rest/greenhopper/1.0/rapidview"
+	url := jcfg.Server + "/rest/greenhopper/1.0/rapidview"
 
 	resp := new(struct {
 		Views []types.RapidView `json:"views"`
@@ -211,7 +210,7 @@ func GetRapidViewID(board string) *types.RapidView {
 func GetSprints(rapidViewID int) ([]types.Sprint, []types.SprintIssue) {
 	url := fmt.Sprintf(
 		"%s/rest/greenhopper/1.0/xboard/plan/backlog/data.json?rapidViewId=%d",
-		server, rapidViewID)
+		jcfg.Server, rapidViewID)
 
 	resp := new(struct {
 		Issues  []types.SprintIssue `json:"issues"`
@@ -240,11 +239,12 @@ func CheckIssueKey(key *string, issueFile string) {
 }
 
 func IssueExists(issueKey *string) bool {
-	url := server + "/rest/api/2/issue/" + *issueKey
+	jcfg.DecryptPassword()
+	url := jcfg.Server + "/rest/api/2/issue/" + *issueKey
 	ctx := context.Background()
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(username, password)
+	req.SetBasicAuth(jcfg.Username, jcfg.Password)
 
 	client := &http.Client{}
 
@@ -266,7 +266,7 @@ func UpdateStatus(key string, transitions []types.Transition) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
 	id := transitions[i].ID
 
 	payload := []byte(`{
@@ -295,7 +295,7 @@ func UpdateStatus(key string, transitions []types.Transition) error {
 }
 
 func UpdateAssignee(key string, user string) error {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
 	payload := []byte(`{"name":"` + user + `"}`)
 
 	resp, err := update(http.MethodPut, url, payload)
@@ -310,7 +310,7 @@ func UpdateAssignee(key string, user string) error {
 
 func CreateNewIssue(project types.Project, issueTypeID,
 	priorityID, summary, description string) (string, error) {
-	url := server + "/rest/api/2/issue"
+	url := jcfg.Server + "/rest/api/2/issue"
 	method := http.MethodPost
 
 	payload := []byte(`{
@@ -358,7 +358,7 @@ func CreateNewIssue(project types.Project, issueTypeID,
 }
 
 func AddWorklog(wDate, wTime, key, seconds, comment string) error {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
 	payload := []byte(`{
 		"comment": "` + comment + `",
 		"started": "` + setWorkStarttime(wDate, wTime) + `",
@@ -376,7 +376,7 @@ func AddWorklog(wDate, wTime, key, seconds, comment string) error {
 }
 
 func AddComment(key string, comment []byte) error {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
 
 	escaped := util.MakeStringJSONSafe(string(comment))
 
@@ -399,7 +399,7 @@ func AddComment(key string, comment []byte) error {
 }
 
 func UpdateDescription(key string, desc []byte) error {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key)
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key)
 
 	jsonDesc := util.MakeStringJSONSafe(string(desc))
 
@@ -416,7 +416,7 @@ func UpdateDescription(key string, desc []byte) error {
 }
 
 func UpdateComment(key string, comment []byte, id string) error {
-	url := server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment/" + id
+	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment/" + id
 
 	escaped := util.MakeStringJSONSafe(string(comment))
 
@@ -444,7 +444,7 @@ func UpdateWorklog(worklog types.SimplifiedTimesheet) error {
 		return &types.Error{Message: "invalid date and time"}
 	}
 
-	url := server + "/rest/api/2/issue/" +
+	url := jcfg.Server + "/rest/api/2/issue/" +
 		strings.ToUpper(worklog.Key) + "/worklog/" + strconv.Itoa(worklog.ID) + "/"
 
 	payload := []byte(`{
@@ -486,10 +486,12 @@ func setWorkStarttime(wDate, wTime string) string {
 }
 
 func update(method, url string, payload []byte) ([]byte, error) {
+	jcfg.DecryptPassword()
+
 	ctx := context.Background()
 	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(username, password)
+	req.SetBasicAuth(jcfg.Username, jcfg.Password)
 
 	client := &http.Client{}
 
@@ -510,11 +512,13 @@ func update(method, url string, payload []byte) ([]byte, error) {
 
 func query(method string, url string, payload []byte, jsonResponse interface{}) {
 	// Create request
+	jcfg.DecryptPassword()
+
 	ctx := context.Background()
 	req, _ := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(payload))
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(username, password)
+	req.SetBasicAuth(jcfg.Username, jcfg.Password)
 
 	client := &http.Client{}
 

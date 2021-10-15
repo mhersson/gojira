@@ -22,6 +22,12 @@ THE SOFTWARE.
 package types
 
 import (
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -37,6 +43,44 @@ type Config struct {
 	WorkingHoursPerDay  float64 `yaml:"numberOfWorkingHoursPerDay"`
 	WorkingHoursPerWeek float64 `yaml:"numberOfWorkingHoursPerWeek"`
 	CountryCode         string  `yaml:"countryCode"`
+}
+
+type JiraConfig struct {
+	Server       string
+	Username     string
+	Password     string
+	PasswordType string
+}
+
+func (c *JiraConfig) DecryptPassword() {
+	switch c.PasswordType {
+	case "pass":
+		pw, err := exec.Command("pass", c.Password).Output() //nolint:gosec
+		if err != nil {
+			fmt.Printf("%v", err)
+			os.Exit(1)
+		}
+
+		c.Password = strings.TrimSpace(string(pw))
+	case "gpg":
+		cmd := exec.Command("gpg", "--decrypt")
+		armored, _ := base64.StdEncoding.DecodeString(c.Password)
+		cmd.Stdin = bytes.NewReader(armored)
+
+		pw, err := cmd.Output()
+		if err != nil {
+			fmt.Printf("%v", err)
+			os.Exit(1)
+		}
+
+		c.Password = strings.TrimSpace(string(pw))
+	default:
+		fmt.Println("You should encrypt your password!!")
+		fmt.Println("Start using your gpg key by running the following command")
+		fmt.Println("echo \"yourpassword\" | gpg -r yourgpgkey -e --armor | base64 --wrap 0")
+		fmt.Println("Copy the output and paste it into the config.yaml password field, all on one line")
+		fmt.Println("Then set passwordtype = gpg in your config file")
+	}
 }
 
 type Error struct {

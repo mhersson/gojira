@@ -22,8 +22,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"bytes"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,7 +35,6 @@ import (
 	"github.com/spf13/viper"
 
 	"gitlab.com/mhersson/gojira/pkg/jira"
-	"gitlab.com/mhersson/gojira/pkg/types"
 )
 
 var rootCmdLong = `The Gojira JIRA client
@@ -124,12 +121,6 @@ func initConfig() {
 		if Cfg.JiraURL[len(Cfg.JiraURL)-1:] == "/" {
 			Cfg.JiraURL = Cfg.JiraURL[:len(Cfg.JiraURL)-1]
 		}
-
-		err := getPassword(&Cfg)
-		if err != nil {
-			fmt.Println("Failed to get password")
-			os.Exit(1)
-		}
 	}
 
 	if GojiraGitRevision != "" && Cfg.CheckForUpdates {
@@ -137,7 +128,7 @@ func initConfig() {
 		getLatestRevision(revs)
 	}
 
-	jira.Configure(Cfg.JiraURL, Cfg.Username, Cfg.Password)
+	jira.Configure(Cfg)
 }
 
 func getHomeFolder() string {
@@ -148,55 +139,6 @@ func getHomeFolder() string {
 	}
 
 	return home
-}
-
-func getPassword(config *types.Config) error {
-	switch config.PasswordType {
-	case "pass":
-		pw, err := runPass([]string{config.Password})
-		if err != nil {
-			return err
-		}
-
-		config.Password = pw
-	case "gpg":
-		pw, err := decodeGPG(config.Password)
-		if err != nil {
-			return err
-		}
-
-		config.Password = pw
-	default:
-		fmt.Println("You should encrypt your password!!")
-		fmt.Println("Start using your gpg key by running the following command")
-		fmt.Println("echo \"yourpassword\" | gpg -r yourgpgkey -e --armor | base64 --wrap 0")
-		fmt.Println("Copy the output and paste it into the config.yaml password field, all on one line")
-		fmt.Println("Then set passwordtype = gpg in your config file")
-	}
-
-	return nil
-}
-
-func runPass(args []string) (string, error) {
-	output, err := exec.Command("pass", args...).Output()
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-
-	return strings.TrimSpace(string(output)), nil
-}
-
-func decodeGPG(b64Armored string) (string, error) {
-	cmd := exec.Command("gpg", "--decrypt")
-	armored, _ := base64.StdEncoding.DecodeString(b64Armored)
-	cmd.Stdin = bytes.NewReader(armored)
-
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("%w", err)
-	}
-
-	return strings.TrimSpace(string(output)), nil
 }
 
 func getLatestRevision(revs string) {
