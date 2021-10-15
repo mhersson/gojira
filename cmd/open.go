@@ -29,7 +29,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"gitlab.com/mhersson/gojira/pkg/jira"
 	"gitlab.com/mhersson/gojira/pkg/types"
 )
 
@@ -55,7 +54,6 @@ var openCmd = &cobra.Command{
 		if len(args) == 1 {
 			IssueKey = strings.ToUpper(args[0])
 		}
-		jira.CheckIssueKey(&IssueKey, IssueFile)
 		openbrowser(Cfg.JiraURL + "/browse/" + IssueKey)
 	},
 }
