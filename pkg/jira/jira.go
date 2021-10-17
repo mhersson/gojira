@@ -48,6 +48,7 @@ func Configure(config types.Config) {
 	jcfg.Username = config.Username
 	jcfg.Password = config.Password
 	jcfg.PasswordType = config.PasswordType
+	jcfg.Decrypted = false
 }
 
 func GetIssues(filter string) []types.Issue {

@@ -50,18 +50,24 @@ type JiraConfig struct {
 	Username     string
 	Password     string
 	PasswordType string
+	Decrypted    bool
 }
 
 func (c *JiraConfig) DecryptPassword() {
+	if c.Decrypted {
+		return
+	}
+
 	switch c.PasswordType {
 	case "pass":
 		pw, err := exec.Command("pass", c.Password).Output() //nolint:gosec
 		if err != nil {
-			fmt.Printf("%v", err)
+			fmt.Printf("Failed to run pass: %s\n", err.Error())
 			os.Exit(1)
 		}
 
 		c.Password = strings.TrimSpace(string(pw))
+		c.Decrypted = true
 	case "gpg":
 		cmd := exec.Command("gpg", "--decrypt")
 		armored, _ := base64.StdEncoding.DecodeString(c.Password)
@@ -69,11 +75,12 @@ func (c *JiraConfig) DecryptPassword() {
 
 		pw, err := cmd.Output()
 		if err != nil {
-			fmt.Printf("%v", err)
+			fmt.Printf("Failed to run gpg decrypt: %s\n", err.Error())
 			os.Exit(1)
 		}
 
 		c.Password = strings.TrimSpace(string(pw))
+		c.Decrypted = true
 	default:
 		fmt.Println("You should encrypt your password!!")
 		fmt.Println("Start using your gpg key by running the following command")
