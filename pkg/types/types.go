@@ -66,7 +66,8 @@ func (c *JiraConfig) DecryptPassword() {
 			os.Exit(1)
 		}
 
-		c.Password = strings.TrimSpace(string(pw))
+		lines := strings.Split(string(pw), "\n")
+		c.Password = strings.TrimSpace(lines[0])
 		c.Decrypted = true
 	case "gpg":
 		cmd := exec.Command("gpg", "--decrypt")
