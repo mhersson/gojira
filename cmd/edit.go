@@ -199,12 +199,17 @@ var editMyWorklogCmd = &cobra.Command{
 				}
 
 				if AdoptUser != "" && !ShowEntireWeek {
-					worklogs = adopRecordsFromUser(worklogs, date, AdoptUser)
+					worklogs = adoptRecordsFromUser(worklogs, date, AdoptUser)
 				}
 
 				out := util.ExecuteTemplate("edit-worklog.tmpl", worklogs)
 				edited, err := captureInputFromEditor(string(out), "edit-worklog-*")
 				cobra.CheckErr(err)
+				if len(edited) == 0 {
+					fmt.Println("Edit canceled by user, no changes made")
+
+					return
+				}
 
 				editedWorklogs := parseEditedWorklog(date, edited)
 				updateChangedWorklogs(worklogs, editedWorklogs)
@@ -251,9 +256,9 @@ func mergeWorklogs(myWorklog []types.SimplifiedTimesheet) []types.SimplifiedTime
 	return wlToday
 }
 
-func adopRecordsFromUser(myWorklog []types.SimplifiedTimesheet, date, username string) []types.SimplifiedTimesheet {
-	if !jira.UserExists(AdoptUser) {
-		fmt.Printf("User %s does not exist.\n", AdoptUser)
+func adoptRecordsFromUser(myWorklog []types.SimplifiedTimesheet, date, username string) []types.SimplifiedTimesheet {
+	if !jira.UserExists(username) {
+		fmt.Printf("User %s does not exist.\n", username)
 		os.Exit(1)
 	}
 

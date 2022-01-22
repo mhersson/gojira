@@ -70,8 +70,16 @@ func captureInputFromEditor(text, pattern string) ([]byte, error) {
 		return []byte{}, fmt.Errorf("%w", err)
 	}
 
+	f, _ := os.Stat(filename)
+	modtime := f.ModTime()
+
 	if err = openFileInEditor(filename); err != nil {
 		return []byte{}, err
+	}
+
+	f, _ = os.Stat(filename)
+	if modtime.Equal(f.ModTime()) {
+		return []byte{}, nil
 	}
 
 	bytes, err := ioutil.ReadFile(filename)
