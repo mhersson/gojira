@@ -102,6 +102,19 @@ func GetTimesheet(fromDate, toDate string, showEntireWeek bool) []types.Timeshee
 	return jsonResponse.Worklog
 }
 
+func GetTimesheetForUser(date, username string) []types.Timesheet {
+	url := jcfg.Server + "/rest/timesheet-gadget/1.0/raw-timesheet.json?startDate=" +
+		date + "&endDate=" + date + "&targetUser=" + username
+
+	jsonResponse := new(struct {
+		Worklog []types.Timesheet `json:"worklog"`
+	})
+
+	query(http.MethodGet, url, nil, jsonResponse)
+
+	return jsonResponse.Worklog
+}
+
 func GetValidProjectsAndIssueType() types.IssueCreateMeta {
 	url := jcfg.Server + "/rest/api/2/issue/createmeta"
 
@@ -240,22 +253,15 @@ func CheckIssueKey(key *string, issueFile string) {
 }
 
 func IssueExists(issueKey *string) bool {
-	jcfg.DecryptPassword()
 	url := jcfg.Server + "/rest/api/2/issue/" + *issueKey
-	ctx := context.Background()
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.SetBasicAuth(jcfg.Username, jcfg.Password)
 
-	client := &http.Client{}
+	return exists(url)
+}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
+func UserExists(username string) bool {
+	url := jcfg.Server + "/rest/api/2/user/?username=" + username
 
-	return resp.StatusCode == 200
+	return exists(url)
 }
 
 func UpdateStatus(key string, transitions []types.Transition) error {
@@ -542,4 +548,23 @@ func query(method string, url string, payload []byte, jsonResponse interface{}) 
 	}
 
 	defer resp.Body.Close()
+}
+
+func exists(url string) bool {
+	jcfg.DecryptPassword()
+
+	ctx := context.Background()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.SetBasicAuth(jcfg.Username, jcfg.Password)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	return resp.StatusCode == 200
 }

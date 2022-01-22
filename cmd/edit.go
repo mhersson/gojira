@@ -195,25 +195,11 @@ var editMyWorklogCmd = &cobra.Command{
 
 				// If mergetoday is set
 				if !util.DateIsToday(date) && MergeToday && !ShowEntireWeek {
-					date = util.Today() // Set the date today
-					ts = jira.GetTimesheet(date, date, ShowEntireWeek)
-					wlToday := util.GetWorklogsSorted(ts, false)
+					worklogs = mergeWorklogs(worklogs)
+				}
 
-					// Reset the ID and the date, and append the logs on today
-					for _, w := range worklogs {
-						wlToday = append(wlToday, types.SimplifiedTimesheet{
-							ID:        666,
-							Date:      date,
-							StartDate: w.StartDate,
-							Key:       w.Key,
-							Summary:   w.Summary,
-							Comment:   w.Comment,
-							TimeSpent: w.TimeSpent,
-						})
-					}
-
-					// Set the complete list as the worklog
-					worklogs = wlToday
+				if AdoptUser != "" && !ShowEntireWeek {
+					worklogs = adopRecordsFromUser(worklogs, date, AdoptUser)
 				}
 
 				out := util.ExecuteTemplate("edit-worklog.tmpl", worklogs)
@@ -239,7 +225,54 @@ func init() {
 
 	editDescrptionCmd.SetUsageTemplate(editDescriptionUsage)
 	editCommentCmd.SetUsageTemplate(editCommentUsage)
-	editMyWorklogCmd.Flags().BoolVarP(&MergeToday, "merge-today", "", false, "merge/append the records from that date")
+	editMyWorklogCmd.Flags().BoolVarP(&MergeToday, "merge-today", "", false, "merge/import the records from that date")
+	editMyWorklogCmd.Flags().StringVarP(&AdoptUser, "adopt-user", "", "",
+		"adopt/import records registered by user on date")
+}
+
+func mergeWorklogs(myWorklog []types.SimplifiedTimesheet) []types.SimplifiedTimesheet {
+	date := util.Today() // Set the date today
+	ts := jira.GetTimesheet(date, date, ShowEntireWeek)
+	wlToday := util.GetWorklogsSorted(ts, false)
+
+	// Reset the ID and the date, and append the logs on today
+	for _, w := range myWorklog {
+		wlToday = append(wlToday, types.SimplifiedTimesheet{
+			ID:        666,
+			Date:      date,
+			StartDate: w.StartDate,
+			Key:       w.Key,
+			Summary:   w.Summary,
+			Comment:   w.Comment,
+			TimeSpent: w.TimeSpent,
+		})
+	}
+
+	return wlToday
+}
+
+func adopRecordsFromUser(myWorklog []types.SimplifiedTimesheet, date, username string) []types.SimplifiedTimesheet {
+	if !jira.UserExists(AdoptUser) {
+		fmt.Printf("User %s does not exist.\n", AdoptUser)
+		os.Exit(1)
+	}
+
+	ts := jira.GetTimesheetForUser(date, AdoptUser)
+	wlToday := util.GetWorklogsSorted(ts, false)
+
+	for _, w := range wlToday {
+		myWorklog = append(myWorklog, types.SimplifiedTimesheet{
+			ID:        666,
+			Date:      date,
+			StartDate: w.StartDate,
+			Key:       w.Key,
+			Summary:   w.Summary,
+			Comment:   w.Comment,
+			TimeSpent: w.TimeSpent,
+		})
+	}
+
+	return myWorklog
 }
 
 func updateChangedWorklogs(worklogs, editedWorklogs []types.SimplifiedTimesheet) {

@@ -289,9 +289,7 @@ var getMyWorklogStatistics = &cobra.Command{
 			t1, _ := time.Parse("2006-01-02", args[0])
 			t2, _ := time.Parse("2006-01-02", args[1])
 			if t2.Before(t1) {
-				t := t2
-				t2 = t1
-				t1 = t
+				t2, t1 = t1, t2
 			}
 
 			fromDate, _ := util.WeekStartEndDate(t1.ISOWeek())
