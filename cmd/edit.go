@@ -187,7 +187,7 @@ var editMyWorklogCmd = &cobra.Command{
 		if Cfg.UseTimesheetPlugin {
 			if validate.Date(date) {
 				ts := jira.GetTimesheet(date, date, ShowEntireWeek)
-				if len(ts) == 0 {
+				if len(ts) == 0 && (AdoptUser == "" || MergeToday) {
 					fmt.Println("There is nothing to edit.")
 					os.Exit(0)
 				}
