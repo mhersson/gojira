@@ -592,6 +592,8 @@ func printStatistics(weeks []types.Week) {
 		fmt.Printf("%s%s\n%-9s%-11s%-12s%-12s%-12s%-5s%10s%s\n", format.Color.Ul, format.Color.Yellow,
 			"Week#", "Start", "End", "Workdays", "Holidays", "Average", "Total", format.Color.Nocolor)
 
+		var weeksTotal float64
+
 		for _, week := range weeks {
 			avg := format.StatsAverage(week.Average(), Cfg.WorkingHoursPerDay)
 			tot := format.StatsTotal(week.TotalTime(), Cfg.WorkingHoursPerWeek, Cfg.WorkingHoursPerDay, week.PublicHolidays)
@@ -601,9 +603,26 @@ func printStatistics(weeks []types.Week) {
 			fmt.Printf(" %-8d%-10s%-16s%-21s%-20s%-15s%18s\n",
 				week.Number(), week.StartDate.Format("01/02"), week.EndDate.Format("01/02"),
 				days, holidays, avg, tot)
+
+			weeksTotal += week.TotalTime()
 		}
+
+		printStatisticsSummary(len(weeks), weeksTotal)
 	} else {
 		fmt.Println("There are no hours registered for this period")
+	}
+}
+
+func printStatisticsSummary(numWeeks int, weeksTotal float64) {
+	expectedTotal := Cfg.WorkingHoursPerWeek * float64(numWeeks)
+	totalSummary := weeksTotal - expectedTotal
+
+	if totalSummary >= 0 {
+		fmt.Printf("\nYou are %s hours ahead of the expected %s hours total for this period\n",
+			format.StatsSummary(totalSummary), format.StatsSummary(expectedTotal))
+	} else {
+		fmt.Printf("\nYou are %s hours short of the expected %s hours total for this period\n",
+			format.StatsSummary(totalSummary), format.StatsSummary(expectedTotal))
 	}
 }
 

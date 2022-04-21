@@ -169,10 +169,6 @@ func SprintStatus(done bool) string {
 }
 
 func StatsTotal(tot, goal, hoursPrDay float64, holidays int) string {
-	if goal == 0 {
-		goal = 37.5
-	}
-
 	switch {
 	case tot >= goal-(hoursPrDay*float64(holidays)):
 		return fmt.Sprintf("%s%.2f%s", Color.Green, tot, Color.Nocolor)
@@ -184,10 +180,6 @@ func StatsTotal(tot, goal, hoursPrDay float64, holidays int) string {
 }
 
 func StatsAverage(avg, goal float64) string {
-	if goal == 0 {
-		goal = 7.5
-	}
-
 	switch {
 	case avg >= goal:
 		return fmt.Sprintf("%s%.2f%s", Color.Green, avg, Color.Nocolor)
@@ -199,10 +191,6 @@ func StatsAverage(avg, goal float64) string {
 }
 
 func StatsWorkdays(days, goal, holidays int) string {
-	if goal == 0 {
-		goal = 5
-	}
-
 	switch {
 	case days >= goal-holidays:
 		return fmt.Sprintf("%s%d%s", Color.Green, days, Color.Nocolor)
@@ -219,4 +207,12 @@ func StatsHolidays(holidays int) string {
 	}
 
 	return fmt.Sprintf("%s%d%s", Color.Blue, holidays, Color.Nocolor)
+}
+
+func StatsSummary(num float64) string {
+	if num >= 0 {
+		return fmt.Sprintf("%s%.2f%s", Color.Green, num, Color.Nocolor)
+	}
+
+	return fmt.Sprintf("%s%.2f%s", Color.Red, num*-1, Color.Nocolor)
 }

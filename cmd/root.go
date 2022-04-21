@@ -106,6 +106,11 @@ func initConfig() {
 	viper.AddConfigPath(exedir)
 	viper.SetConfigName("config")
 
+	// Set some default values
+	Cfg.NumWorkingDays = 5
+	Cfg.WorkingHoursPerDay = 7.5
+	Cfg.WorkingHoursPerWeek = 37.5
+
 	if err := viper.ReadInConfig(); err == nil {
 		Cfg.JiraURL = viper.GetString("JiraURL")
 		Cfg.Username = viper.GetString("username")
@@ -113,9 +118,19 @@ func initConfig() {
 		Cfg.PasswordType = viper.GetString("passwordtype")
 		Cfg.UseTimesheetPlugin = viper.GetBool("useTimesheetPlugin")
 		Cfg.CheckForUpdates = viper.GetBool("checkForUpdates")
-		Cfg.NumWorkingDays = viper.GetInt("numberOfWorkingDays")
-		Cfg.WorkingHoursPerDay = viper.GetFloat64("numberOfWorkingHoursPerDay")
-		Cfg.WorkingHoursPerWeek = viper.GetFloat64("numberOfWorkingHoursPerWeek")
+
+		if i := viper.GetInt("numberOfWorkingDays"); i > 0 {
+			Cfg.NumWorkingDays = i
+		}
+
+		if i := viper.GetFloat64("numberOfWorkingHoursPerDay"); i > 0 {
+			Cfg.WorkingHoursPerDay = i
+		}
+
+		if i := viper.GetFloat64("numberOfWorkingHoursPerWeek"); i > 0 {
+			Cfg.WorkingHoursPerWeek = i
+		}
+
 		Cfg.CountryCode = viper.GetString("countryCode")
 
 		if Cfg.JiraURL[len(Cfg.JiraURL)-1:] == "/" {
