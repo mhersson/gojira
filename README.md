@@ -9,6 +9,9 @@ Gojira is the Japanese word for Godzilla.
   - Create issues
   - Create and edit existing comments
   - Create or edit worklogs for time reporting
+  - Import registered hours of colleagues to copy reporting (*)
+  - Import your own previously registered hours for reoccurring meetings (*)
+  - Show time reporting statistics (*)
   - Update issue status and assignee
   - Show comments, current status and the entire worklog
   - One view to show it all with the describe command
@@ -18,6 +21,8 @@ Gojira is the Japanese word for Godzilla.
   - Use your favorite editor set by $EDITOR, defaults to vim
   - Open issue in default browser
   
+  
+  (*) Only with timesheet plugin enabled
 
 Gojira integrates with passwordstore and gpg to keep your password safe.
 
