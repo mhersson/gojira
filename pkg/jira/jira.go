@@ -511,7 +511,7 @@ func update(method, url string, payload []byte) ([]byte, error) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
-		return body, &types.Error{Message: resp.Status}
+		return body, &types.Error{Message: checkResponseCode(resp)}
 	}
 
 	return body, nil
@@ -540,6 +540,9 @@ func query(method string, url string, payload []byte, jsonResponse interface{}) 
 		log.Fatal(err)
 	}
 
+	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+		log.Fatalf("Error:%s", checkResponseCode(resp))
+	}
 	// fmt.Println(string(body))
 
 	err = json.Unmarshal(body, jsonResponse)
@@ -547,7 +550,7 @@ func query(method string, url string, payload []byte, jsonResponse interface{}) 
 		log.Fatalf("Failed to parse json response: %s\n", err)
 	}
 
-	defer resp.Body.Close()
+	resp.Body.Close()
 }
 
 func exists(url string) bool {
@@ -564,7 +567,23 @@ func exists(url string) bool {
 	if err != nil {
 		return false
 	}
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+		log.Fatalf("Error:%s", checkResponseCode(resp))
+	}
+
 	defer resp.Body.Close()
 
 	return resp.StatusCode == 200
+}
+
+func checkResponseCode(resp *http.Response) string {
+	switch resp.StatusCode {
+	case 401:
+		return fmt.Sprintf("%s. Please check your credentials", resp.Status)
+	case 403:
+		return fmt.Sprintf("%s. Please check that your account is not blocked by captcha.", resp.Status)
+	default:
+		return resp.Status
+	}
 }
