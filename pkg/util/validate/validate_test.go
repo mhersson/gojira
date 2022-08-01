@@ -84,6 +84,7 @@ func TestIssueKey(t *testing.T) {
 	}{
 		{"GOJIRA-1", true},
 		{"GOJIRA-1910", true},
+		{"GOJIRA-19101", true},
 		{"gojira-1910", false},
 		{"GOJIRA-1910342", false},
 		{"GOJIRA1-1", false},

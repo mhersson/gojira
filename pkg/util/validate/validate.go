@@ -41,7 +41,7 @@ func Time(time string) bool {
 }
 
 func IssueKey(key *string) bool {
-	re := regexp.MustCompile("^[A-Z]{2,9}-[0-9]{1,4}$")
+	re := regexp.MustCompile("^[A-Z]{2,9}-[0-9]{1,5}$")
 
 	return re.MatchString(*key)
 }
