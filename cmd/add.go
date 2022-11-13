@@ -87,6 +87,9 @@ Example specifying the issue and the date and time:
 
 Example specifying the issue and adding a comment:
   # gojira add work GOJIRA-1 2h --comment "Helping out customer X"
+
+Example same as above but using alias (requires g1 set to GOJIRA-1 in config)
+  # gojira add work g1 2h --comment "Helping out customer X"
 `
 
 var addCmd = &cobra.Command{
@@ -109,6 +112,11 @@ var addWorkCmd = &cobra.Command{
 		} else {
 			IssueKey = strings.ToUpper(args[0])
 			work = args[1]
+		}
+
+		aliasValue := Cfg.Aliases[strings.ToLower(args[0])]
+		if aliasValue != "" {
+			IssueKey = strings.ToUpper(aliasValue)
 		}
 
 		jira.CheckIssueKey(&IssueKey, IssueFile)

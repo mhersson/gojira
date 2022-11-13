@@ -14,7 +14,6 @@ username: jirauser
 password: my-super-simple-plain-password
 passwordtype: plain
 
-
 # Set this to true if the timesheet plugin is installed on the server
 # https://www.primetimesheet.net/wiki/Overview.html
 # This greatly increase performance and enables additional features like
@@ -38,3 +37,13 @@ checkForUpdates: true
 
 # The two letter country code to use when looking up public holidays
 countryCode: "NO"
+
+# Aliases is a key value map where one can configure aliases for often used
+# issues keys for time reporting. E.g if you have a special issue key used for
+# registering internal meetings, then you could create an alias like m1 to point to
+# that issue key, and then write something like `gojira add work m1 1h ...`
+# when registering hours on that ticket
+
+aliases:
+  m1: <meeting issue key>
+  t1: <issue key>

@@ -133,6 +133,8 @@ func initConfig() {
 
 		Cfg.CountryCode = viper.GetString("countryCode")
 
+		Cfg.Aliases = viper.GetStringMapString("aliases")
+
 		if Cfg.JiraURL[len(Cfg.JiraURL)-1:] == "/" {
 			Cfg.JiraURL = Cfg.JiraURL[:len(Cfg.JiraURL)-1]
 		}

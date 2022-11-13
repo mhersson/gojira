@@ -1,18 +1,19 @@
 linters:
-   enable-all: true
-   disable:
-   - interfacer
-   - maligned
-   - scopelint
-   - golint
-   - gomnd
-   - gochecknoinits
-   - gci
-   - exhaustivestruct
-   - gochecknoglobals
-   - gofumpt
-   - forbidigo
-   - varnamelen
+  enable-all: true
+  disable:
+    - interfacer
+    - maligned
+    - scopelint
+    - golint
+    - gomnd
+    - gochecknoinits
+    - gci
+    - exhaustivestruct
+    - exhaustruct
+    - gochecknoglobals
+    - gofumpt
+    - forbidigo
+    - varnamelen
 
 issues:
   exclude-rules:

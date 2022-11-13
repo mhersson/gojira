@@ -23,7 +23,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -97,13 +96,13 @@ func setActiveIssue(key string) {
 
 	createCacheFolder()
 
-	err := ioutil.WriteFile(IssueFile, []byte(key), 0600)
+	err := os.WriteFile(IssueFile, []byte(key), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
 		os.Exit(1)
 	}
 
-	err = ioutil.WriteFile(IssueTypeFile,
+	err = os.WriteFile(IssueTypeFile,
 		[]byte(issues[0].Fields.IssueType.ID), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
@@ -119,7 +118,7 @@ func setActiveBoard(board string) {
 
 	createCacheFolder()
 
-	err := ioutil.WriteFile(BoardFile, []byte(board), 0600)
+	err := os.WriteFile(BoardFile, []byte(board), 0600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", board)
 		os.Exit(1)

@@ -23,7 +23,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 )
@@ -50,7 +49,7 @@ func openFileInEditor(filename string) error {
 }
 
 func captureInputFromEditor(text, pattern string) ([]byte, error) {
-	file, err := ioutil.TempFile(os.TempDir(), pattern)
+	file, err := os.CreateTemp(os.TempDir(), pattern)
 	if err != nil {
 		return []byte{}, fmt.Errorf("%w", err)
 	}
@@ -58,7 +57,7 @@ func captureInputFromEditor(text, pattern string) ([]byte, error) {
 	filename := file.Name()
 
 	if text != "" {
-		err := ioutil.WriteFile(filename, []byte(text), 0600)
+		err := os.WriteFile(filename, []byte(text), 0600)
 		if err != nil {
 			return []byte{}, fmt.Errorf("%w", err)
 		}
@@ -82,7 +81,7 @@ func captureInputFromEditor(text, pattern string) ([]byte, error) {
 		return []byte{}, nil
 	}
 
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return []byte{}, fmt.Errorf("%w", err)
 	}

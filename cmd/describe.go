@@ -33,7 +33,7 @@ import (
 )
 
 const describeUsage string = `
-By default the the active issue will be described,
+By default the active issue will be described,
 but this can be changed by adding the issue key as argument.
 
 Usage:
@@ -165,7 +165,7 @@ func printIssueLinks(issue types.IssueDescription) {
 	}
 
 	for k, v := range outward {
-		fmt.Printf("\n%s%s:%s\n", format.Color.Ul, strings.Title(k), format.Color.Nocolor)
+		fmt.Printf("\n%s%s:%s\n", format.Color.Ul, strings.ToTitle(k), format.Color.Nocolor)
 
 		for _, l := range v {
 			fmt.Print(l)
@@ -173,7 +173,7 @@ func printIssueLinks(issue types.IssueDescription) {
 	}
 
 	for k, v := range inward {
-		fmt.Printf("\n%s%s:%s\n", format.Color.Ul, strings.Title(k), format.Color.Nocolor)
+		fmt.Printf("\n%s%s:%s\n", format.Color.Ul, strings.ToTitle(k), format.Color.Nocolor)
 
 		for _, l := range v {
 			fmt.Print(l)

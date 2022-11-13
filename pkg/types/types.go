@@ -33,16 +33,17 @@ import (
 
 // var cfgFile string.
 type Config struct {
-	JiraURL             string  `yaml:"JiraURL"` //nolint:tagliatelle
-	Username            string  `yaml:"username"`
-	Password            string  `yaml:"password"`
-	PasswordType        string  `yaml:"passwordtype"`
-	UseTimesheetPlugin  bool    `yaml:"useTimesheetPlugin"`
-	CheckForUpdates     bool    `yaml:"checkForUpdates"`
-	NumWorkingDays      int     `yaml:"numberOfWorkingDays"`
-	WorkingHoursPerDay  float64 `yaml:"numberOfWorkingHoursPerDay"`
-	WorkingHoursPerWeek float64 `yaml:"numberOfWorkingHoursPerWeek"`
-	CountryCode         string  `yaml:"countryCode"`
+	JiraURL             string            `yaml:"JiraURL"` //nolint:tagliatelle
+	Username            string            `yaml:"username"`
+	Password            string            `yaml:"password"`
+	PasswordType        string            `yaml:"passwordtype"`
+	UseTimesheetPlugin  bool              `yaml:"useTimesheetPlugin"`
+	CheckForUpdates     bool              `yaml:"checkForUpdates"`
+	NumWorkingDays      int               `yaml:"numberOfWorkingDays"`
+	WorkingHoursPerDay  float64           `yaml:"numberOfWorkingHoursPerDay"`
+	WorkingHoursPerWeek float64           `yaml:"numberOfWorkingHoursPerWeek"`
+	CountryCode         string            `yaml:"countryCode"`
+	Aliases             map[string]string `yaml:"aliases,omitempty"`
 }
 
 type JiraConfig struct {
