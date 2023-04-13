@@ -316,7 +316,8 @@ func UpdateAssignee(key string, user string) error {
 }
 
 func CreateNewIssue(project types.Project, issueTypeID,
-	priorityID, summary, description string) (string, error) {
+	priorityID, summary, description string,
+) (string, error) {
 	url := jcfg.Server + "/rest/api/2/issue"
 	method := http.MethodPost
 
@@ -530,7 +531,6 @@ func query(method string, url string, payload []byte, jsonResponse interface{}) 
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -579,9 +579,9 @@ func exists(url string) bool {
 
 func checkResponseCode(resp *http.Response) string {
 	switch resp.StatusCode {
-	case 401:
+	case http.StatusUnauthorized:
 		return fmt.Sprintf("%s. Please check your credentials", resp.Status)
-	case 403:
+	case http.StatusForbidden:
 		return fmt.Sprintf("%s. Please check that your account is not blocked by captcha.", resp.Status)
 	default:
 		return resp.Status

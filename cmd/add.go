@@ -24,11 +24,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"gitlab.com/mhersson/gojira/pkg/jira"
-	"gitlab.com/mhersson/gojira/pkg/util/convert"
 	"gitlab.com/mhersson/gojira/pkg/util/format"
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
@@ -52,7 +53,8 @@ Flags:
 `
 
 const addWorkUsage string = `This command will add work to an issue worklog.
-The time must be specified in either hours OR minutes on this format: 2h OR 120m
+The time must be specified in either hours or minutes or combined:
+2h30m or 2.5h or 150m
 
 By default the time is registered on the active issue with todays date and time,
 but all of them can be set explicitly. The issue key as argument, and the date
@@ -126,17 +128,17 @@ var addWorkCmd = &cobra.Command{
 		}
 
 		if WorkTime != "" && !validate.Time(WorkTime) {
-			fmt.Println("Invalid time. Tate must be on the format hh:mm")
+			fmt.Println("Invalid time. Time must be on the format hh:mm")
 			os.Exit(1)
 		}
 
-		duration, err := convert.DurationStringToSeconds(work)
+		duration, err := time.ParseDuration(work)
 		if err != nil {
 			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
 		}
 
-		err = jira.AddWorklog(WorkDate, WorkTime, IssueKey, duration, WorkComment)
+		err = jira.AddWorklog(WorkDate, WorkTime, IssueKey, strconv.FormatFloat(duration.Seconds(), 'f', 0, 64), WorkComment)
 		if err != nil {
 			fmt.Printf("Failed to add worklog - %s", err.Error())
 			os.Exit(1)
