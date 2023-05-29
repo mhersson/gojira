@@ -26,6 +26,12 @@ useTimesheetPlugin: true
 # in your path
 checkForUpdates: true
 
+
+# The sprintFilter is a regular expression that can be used to filter out which 
+# of the sprints from the active board one would like to see. The filter is applied 
+# to the name of the sprint. If not set all sprints will be printed.
+sprintFilter: "Sprint.*"
+
 # The number of regular working days in a normal week (default 5)
 # numberOfWorkingDays: 5
 

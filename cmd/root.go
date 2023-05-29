@@ -118,6 +118,7 @@ func initConfig() {
 		Cfg.PasswordType = viper.GetString("passwordtype")
 		Cfg.UseTimesheetPlugin = viper.GetBool("useTimesheetPlugin")
 		Cfg.CheckForUpdates = viper.GetBool("checkForUpdates")
+		Cfg.SprintFilter = viper.GetString("sprintFilter")
 
 		if i := viper.GetInt("numberOfWorkingDays"); i > 0 {
 			Cfg.NumWorkingDays = i

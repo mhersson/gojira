@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -44,6 +45,7 @@ type Config struct {
 	WorkingHoursPerWeek float64           `yaml:"numberOfWorkingHoursPerWeek"`
 	CountryCode         string            `yaml:"countryCode"`
 	Aliases             map[string]string `yaml:"aliases,omitempty"`
+	SprintFilter        string            `yaml:"sprintFilter"`
 }
 
 type JiraConfig struct {
@@ -335,6 +337,16 @@ type Sprint struct {
 	Name      string `json:"name"`
 	State     string `json:"state"`
 	IssuesIDs []int  `json:"issuesIds"`
+}
+
+func (s *Sprint) MatchesFilter(filter string) bool {
+	if filter == "" {
+		return true
+	}
+
+	re := regexp.MustCompile(filter)
+
+	return re.MatchString(s.Name)
 }
 
 type SprintIssue struct {

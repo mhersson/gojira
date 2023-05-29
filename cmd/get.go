@@ -66,6 +66,7 @@ Examples:
   gojira get all -f "project = OSE and resolution = unresolved"
 
 `
+
 const getCommentsUsage string = `
 By default the comments from the active issue is displayed,
 but this can be changed by adding the issue key as argument.
@@ -309,7 +310,7 @@ var getMyWorklogStatistics = &cobra.Command{
 			worklogs := util.GetWorklogsSorted(ts, true)
 
 			if _, err := os.Stat(CacheFolder); errors.Is(err, os.ErrNotExist) {
-				_ = os.Mkdir(CacheFolder, 0755)
+				_ = os.Mkdir(CacheFolder, 0o755)
 			}
 
 			publicHolidays := util.LoadPublicHolidays(
@@ -344,6 +345,9 @@ var getSprintCMD = &cobra.Command{
 			sprints, issues := jira.GetSprints(rapidView.ID)
 			for i := range sprints {
 				sprint := sprints[i]
+				if !sprint.MatchesFilter(Cfg.SprintFilter) {
+					continue
+				}
 				fmt.Println(format.SprintHeader(sprint))
 				printSprintIssues(&sprint, issues, *issueTypes, priorities)
 			}
@@ -627,7 +631,8 @@ func printStatisticsSummary(numWeeks int, weeksTotal float64) {
 }
 
 func printSprintIssues(
-	sprint *types.Sprint, issues []types.SprintIssue, issueTypes []types.IssueType, priorites []types.Priority) {
+	sprint *types.Sprint, issues []types.SprintIssue, issueTypes []types.IssueType, priorites []types.Priority,
+) {
 	if len(issues) > 0 {
 		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-10s%-10s%-6s%-20s%s\n", format.Color.Ul, format.Color.Yellow,
 			"Key", "Type", "Priority", "Summary", "Est.", "Epic", "Done", "Assignee", format.Color.Nocolor)
