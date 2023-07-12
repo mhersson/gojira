@@ -39,6 +39,8 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
+var GetActiveSprint bool
+
 const getAllIssuesUsage string = `This command will by default display all unresolved
 issues assinged to you, but by using the --filter flag
 you can compose your own jql filter. All query results,
@@ -129,8 +131,6 @@ Flags:
 `
 
 const getSprintUsage string = `
-Get the current active sprint and all it's issues.
-
 Usage:
   gojira get sprint [NAME OF BOARD]
 
@@ -139,6 +139,7 @@ Aliases:
 
 Flags:
   -h, --help                   help for sprint
+  -a, --active                 only show active sprints
 `
 
 // getCmd represents the get command.
@@ -329,7 +330,7 @@ var getMyWorklogStatistics = &cobra.Command{
 
 var getSprintCMD = &cobra.Command{
 	Use:   "sprint",
-	Short: "Display current sprint",
+	Short: "Display sprints from the active board",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var board string
@@ -346,6 +347,9 @@ var getSprintCMD = &cobra.Command{
 			for i := range sprints {
 				sprint := sprints[i]
 				if !sprint.MatchesFilter(Cfg.SprintFilter) {
+					continue
+				}
+				if sprint.State != "ACTIVE" && GetActiveSprint {
 					continue
 				}
 				fmt.Println(format.SprintHeader(sprint))
@@ -383,6 +387,7 @@ func init() {
 	getMyWorklogStatistics.SetUsageTemplate(myWorklogStatisticsUsage)
 
 	getSprintCMD.SetUsageTemplate(getSprintUsage)
+	getSprintCMD.Flags().BoolVarP(&GetActiveSprint, "active", "a", false, "only get active sprints")
 }
 
 func getStatus(key string) string {

@@ -1,28 +1,29 @@
 linters:
   enable-all: true
   disable:
-    - interfacer
-    - maligned
-    - scopelint
-    - golint
-    - gomnd
-    - gochecknoinits
-    - gci
-    - exhaustivestruct
-    - exhaustruct
-    - gochecknoglobals
-    - gofumpt
-    - forbidigo
-    - varnamelen
+  - interfacer
+  - maligned
+  - scopelint
+  - golint
+  - gomnd
+  - gochecknoinits
+  - depguard
+  - gci
+  - exhaustivestruct
+  - exhaustruct
+  - gochecknoglobals
+  - gofumpt
+  - forbidigo
+  - varnamelen
 
 issues:
   exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - goerr113
+  # Exclude some linters from running on tests files.
+  - path: _test\.go
+    linters:
+    - gocyclo
+    - errcheck
+    - dupl
+    - gosec
+    - goerr113
   fix: true
