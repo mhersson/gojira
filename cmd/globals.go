@@ -29,23 +29,27 @@ import (
 
 // GojiraVersion GojiraGitRevision and GojiraRepository
 // are all inserted at build time from the Makefile.
-var GojiraVersion string
-var GojiraGitRevision string
-var GojiraRepository string
+var (
+	GojiraVersion     string
+	GojiraGitRevision string
+	GojiraRepository  string
+)
 
-var IssueKey string
-var WorkDate string    // Used by `add work` to specify date
-var WorkTime string    // Used by `add work` to specify at what time the work was done
-var WorkComment string // Used by `add work` to add a custom comment to the log
-var JQLFilter string   // Used by `get all` to create customer queries
-var Assignee string    // Used by `update assignee`
-var VersionFlag bool
-var ShowEntireWeek = false // Used by `get myworklog`
-var MergeToday = false     // Used by `edit myworklog`
-var AdoptUser string       // Used by `edit myworklog`
-var CacheFolder = path.Join(getHomeFolder(), ".gojira")
-var IssueFile = path.Join(CacheFolder, "issue")
-var IssueTypeFile = path.Join(CacheFolder, "issuetype")
-var BoardFile = path.Join(CacheFolder, "board")
+var (
+	IssueKey       string
+	WorkDate       string // Used by `add work` to specify date
+	WorkTime       string // Used by `add work` to specify at what time the work was done
+	WorkComment    string // Used by `add work` to add a custom comment to the log
+	JQLFilter      string // Used by `get all` to create customer queries
+	Assignee       string // Used by `update assignee`
+	VersionFlag    bool
+	ShowEntireWeek = false // Used by `get myworklog`
+	MergeToday     = false // Used by `edit myworklog`
+	AdoptUser      string  // Used by `edit myworklog`
+	ConfigFolder   = path.Join(getHomeFolder(), ".config/gojira")
+	IssueFile      = path.Join(ConfigFolder, "issue")
+	IssueTypeFile  = path.Join(ConfigFolder, "issuetype")
+	BoardFile      = path.Join(ConfigFolder, "board")
+)
 
 var Cfg types.Config

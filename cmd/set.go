@@ -24,7 +24,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -75,7 +74,6 @@ var setActiveCmd = &cobra.Command{
 		default:
 			fmt.Println("First argument must be issue or board")
 		}
-
 	},
 }
 
@@ -94,16 +92,16 @@ func setActiveIssue(key string) {
 		os.Exit(1)
 	}
 
-	createCacheFolder()
+	createConfigFolder()
 
-	err := os.WriteFile(IssueFile, []byte(key), 0600)
+	err := os.WriteFile(IssueFile, []byte(key), 0o600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
 		os.Exit(1)
 	}
 
 	err = os.WriteFile(IssueTypeFile,
-		[]byte(issues[0].Fields.IssueType.ID), 0600)
+		[]byte(issues[0].Fields.IssueType.ID), 0o600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", key)
 		os.Exit(1)
@@ -116,21 +114,20 @@ func setActiveBoard(board string) {
 		os.Exit(1)
 	}
 
-	createCacheFolder()
+	createConfigFolder()
 
-	err := os.WriteFile(BoardFile, []byte(board), 0600)
+	err := os.WriteFile(BoardFile, []byte(board), 0o600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", board)
 		os.Exit(1)
 	}
 }
 
-func createCacheFolder() {
-	folder := path.Join(getHomeFolder(), ".gojira")
-	_, err := os.Stat(folder)
+func createConfigFolder() {
+	_, err := os.Stat(ConfigFolder)
 
 	if os.IsNotExist(err) {
-		err := os.Mkdir(folder, 0755)
+		err := os.Mkdir(ConfigFolder, 0o755)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

@@ -31,8 +31,18 @@ import (
 var unsetCmd = &cobra.Command{
 	Use:   "unset",
 	Short: "Unset (clear) active issue and board",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		unsetActive()
+		switch args[0] {
+		case "issue":
+			unsetActive(IssueFile)
+			fmt.Println("Active issue cleared")
+		case "board":
+			unsetActive(BoardFile)
+			fmt.Println("Active board cleared")
+		default:
+			fmt.Println("First argument must be issue or board")
+		}
 	},
 }
 
@@ -40,12 +50,10 @@ func init() {
 	rootCmd.AddCommand(unsetCmd)
 }
 
-func unsetActive() {
-	err := os.RemoveAll(CacheFolder)
-	if err != nil {
-		fmt.Println("Failed to clear active issue and board")
+func unsetActive(file string) {
+	err := os.Remove(file)
+	if err != nil && !os.IsNotExist(err) {
+		fmt.Println("Failed to clear active issue")
 		os.Exit(1)
 	}
-
-	fmt.Println("Active issue and board cleared")
 }

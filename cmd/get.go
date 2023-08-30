@@ -310,12 +310,12 @@ var getMyWorklogStatistics = &cobra.Command{
 
 			worklogs := util.GetWorklogsSorted(ts, true)
 
-			if _, err := os.Stat(CacheFolder); errors.Is(err, os.ErrNotExist) {
-				_ = os.Mkdir(CacheFolder, 0o755)
+			if _, err := os.Stat(ConfigFolder); errors.Is(err, os.ErrNotExist) {
+				_ = os.Mkdir(ConfigFolder, 0o755)
 			}
 
 			publicHolidays := util.LoadPublicHolidays(
-				filepath.Join(CacheFolder, "public-holidays-"+t1.Format("2006")+"-"+Cfg.CountryCode+".json"),
+				filepath.Join(ConfigFolder, "public-holidays-"+t1.Format("2006")+"-"+Cfg.CountryCode+".json"),
 				t1.Format("2006"),
 				Cfg.CountryCode)
 
