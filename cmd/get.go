@@ -39,7 +39,7 @@ import (
 	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
-var GetActiveSprint bool
+var GetAllSprints bool
 
 const getAllIssuesUsage string = `This command will by default display all unresolved
 issues assinged to you, but by using the --filter flag
@@ -139,7 +139,7 @@ Aliases:
 
 Flags:
   -h, --help                   help for sprint
-  -a, --active                 only show active sprints
+  -a, --all                    get all sprints (future and  active)
 `
 
 // getCmd represents the get command.
@@ -349,7 +349,7 @@ var getSprintCMD = &cobra.Command{
 				if !sprint.MatchesFilter(Cfg.SprintFilter) {
 					continue
 				}
-				if sprint.State != "ACTIVE" && GetActiveSprint {
+				if sprint.State != "ACTIVE" && !GetAllSprints {
 					continue
 				}
 				fmt.Println(format.SprintHeader(sprint))
@@ -387,7 +387,7 @@ func init() {
 	getMyWorklogStatistics.SetUsageTemplate(myWorklogStatisticsUsage)
 
 	getSprintCMD.SetUsageTemplate(getSprintUsage)
-	getSprintCMD.Flags().BoolVarP(&GetActiveSprint, "active", "a", false, "only get active sprints")
+	getSprintCMD.Flags().BoolVarP(&GetAllSprints, "all", "a", false, "get all sprints")
 }
 
 func getStatus(key string) string {
