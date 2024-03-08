@@ -43,6 +43,8 @@ import (
 
 var jcfg types.JiraConfig
 
+const restAPIIssueURL = "/rest/api/2/issue/"
+
 func Configure(config types.Config) {
 	jcfg.Server = config.JiraURL
 	jcfg.Username = config.Username
@@ -146,7 +148,7 @@ func GetIssueTypes() *[]types.IssueType {
 }
 
 func GetIssue(key string) types.IssueDescription {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key)
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key)
 
 	jsonResponse := &types.IssueDescription{}
 
@@ -168,7 +170,7 @@ func GetIssuesInEpic(key string) []types.Issue {
 }
 
 func GetTransistions(key string) []types.Transition {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/transitions"
 
 	jsonResponse := new(struct {
 		Transitions []types.Transition `json:"transitions"`
@@ -180,7 +182,7 @@ func GetTransistions(key string) []types.Transition {
 }
 
 func GetComments(key string) []types.Comment {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/comment"
 
 	jsonResponse := new(struct {
 		Comments []types.Comment `json:"comments"`
@@ -192,7 +194,7 @@ func GetComments(key string) []types.Comment {
 }
 
 func GetWorklogs(key string) []types.Worklog {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/worklog"
 
 	jsonResponse := new(struct {
 		Worklogs []types.Worklog `json:"worklogs"`
@@ -253,7 +255,7 @@ func CheckIssueKey(key *string, issueFile string) {
 }
 
 func IssueExists(issueKey *string) bool {
-	url := jcfg.Server + "/rest/api/2/issue/" + *issueKey
+	url := jcfg.Server + restAPIIssueURL + *issueKey
 
 	return exists(url)
 }
@@ -273,7 +275,7 @@ func UpdateStatus(key string, transitions []types.Transition) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/transitions"
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/transitions"
 	id := transitions[i].ID
 
 	payload := []byte(`{
@@ -302,7 +304,7 @@ func UpdateStatus(key string, transitions []types.Transition) error {
 }
 
 func UpdateAssignee(key string, user string) error {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/assignee"
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/assignee"
 	payload := []byte(`{"name":"` + user + `"}`)
 
 	resp, err := update(http.MethodPut, url, payload)
@@ -366,7 +368,7 @@ func CreateNewIssue(project types.Project, issueTypeID,
 }
 
 func AddWorklog(wDate, wTime, key, seconds, comment string) error {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/worklog"
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/worklog"
 	payload := []byte(`{
 		"comment": "` + comment + `",
 		"started": "` + setWorkStarttime(wDate, wTime) + `",
@@ -384,7 +386,7 @@ func AddWorklog(wDate, wTime, key, seconds, comment string) error {
 }
 
 func AddComment(key string, comment []byte) error {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment"
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/comment"
 
 	escaped := util.MakeStringJSONSafe(string(comment))
 
@@ -407,7 +409,7 @@ func AddComment(key string, comment []byte) error {
 }
 
 func UpdateDescription(key string, desc []byte) error {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key)
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key)
 
 	jsonDesc := util.MakeStringJSONSafe(string(desc))
 
@@ -424,7 +426,7 @@ func UpdateDescription(key string, desc []byte) error {
 }
 
 func UpdateComment(key string, comment []byte, id string) error {
-	url := jcfg.Server + "/rest/api/2/issue/" + strings.ToUpper(key) + "/comment/" + id
+	url := jcfg.Server + restAPIIssueURL + strings.ToUpper(key) + "/comment/" + id
 
 	escaped := util.MakeStringJSONSafe(string(comment))
 
@@ -452,7 +454,7 @@ func UpdateWorklog(worklog types.SimplifiedTimesheet) error {
 		return &types.Error{Message: "invalid date and time"}
 	}
 
-	url := jcfg.Server + "/rest/api/2/issue/" +
+	url := jcfg.Server + restAPIIssueURL +
 		strings.ToUpper(worklog.Key) + "/worklog/" + strconv.Itoa(worklog.ID) + "/"
 
 	payload := []byte(`{
@@ -580,9 +582,9 @@ func exists(url string) bool {
 func checkResponseCode(resp *http.Response) string {
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
-		return fmt.Sprintf("%s. Please check your credentials", resp.Status)
+		return resp.Status + ". Please check your credentials"
 	case http.StatusForbidden:
-		return fmt.Sprintf("%s. Please check that your account is not blocked by captcha.", resp.Status)
+		return resp.Status + ". Please check that your account is not blocked by captcha."
 	default:
 		return resp.Status
 	}
