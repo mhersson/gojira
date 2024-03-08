@@ -31,7 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -99,7 +99,7 @@ func GetActiveIssue(path string) string {
 		os.Exit(1)
 	}
 
-	out, err := ioutil.ReadFile(path)
+	out, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println("Failed to get active issue")
 		os.Exit(1)
@@ -114,13 +114,13 @@ func GetActiveBoard(path string) string {
 		os.Exit(0)
 	}
 
-	out, err := ioutil.ReadFile(path)
+	out, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println("Failed to get active board")
 		os.Exit(1)
 	}
 
-	return string(out)
+	return strings.TrimSpace(string(out))
 }
 
 func GetWorklogsSorted(worklogs []types.Timesheet, truncate bool) []types.SimplifiedTimesheet {
@@ -145,7 +145,8 @@ func GetWorklogsSorted(worklogs []types.Timesheet, truncate bool) []types.Simpli
 				Key:       wl.Key,
 				Summary:   wl.Summary,
 				Comment:   entry.Comment,
-				TimeSpent: entry.TimeSpent}
+				TimeSpent: entry.TimeSpent,
+			}
 			week = append(week, ts)
 		}
 	}
@@ -158,7 +159,8 @@ func GetWorklogsSorted(worklogs []types.Timesheet, truncate bool) []types.Simpli
 }
 
 func GroupWorklogsByWeek(
-	fromDate, toDate string, worklogs []types.SimplifiedTimesheet, holidays []string) []types.Week {
+	fromDate, toDate string, worklogs []types.SimplifiedTimesheet, holidays []string,
+) []types.Week {
 	t1, _ := time.Parse("2006-01-02", fromDate)
 	t2, _ := time.Parse("2006-01-02", toDate)
 
@@ -264,7 +266,7 @@ func ExecuteTemplate(filename string, content interface{}) []byte {
 }
 
 func templateFuncMap() template.FuncMap {
-	var fns = template.FuncMap{
+	fns := template.FuncMap{
 		"getTime": func(date string) string {
 			return strings.Split(date, " ")[1]
 		},
@@ -329,7 +331,7 @@ func HTTPGet(url string) []byte {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
