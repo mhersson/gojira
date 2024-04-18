@@ -1,7 +1,7 @@
 builds:
 - env:
   - CGO_ENABLED=0
-  - REPOSITORY=github.com/mhersson/gojira
+  - REPOSITORY=https://github.com/mhersson/gojira
   goos:
   - darwin
   - linux
