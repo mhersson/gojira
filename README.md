@@ -1,5 +1,7 @@
 # The Gojira JIRA client
 
+![Build status](https://github.com/mhersson/gojira/actions/workflows/build.yml/badge.svg)
+
 This project is a product of me being bored out of my mind because of Corona
 virus quarantine combined with Easter holidays.
 
@@ -21,13 +23,11 @@ Gojira is the Japanese word for Godzilla.
 - Mark issue and/or board as active for less typing
 - Use your favorite editor set by $EDITOR, defaults to vim
 - Open issue in default browser
+- Integrates with passwordstore and gpg to keep your password safe.
+- Full command tab completion support, and most commands have
+- Assigned command aliases to their first letter for less typing.
   
   (*) Only with timesheet plugin enabled
-
-Gojira integrates with passwordstore and gpg to keep your password safe.
-
-Gojira has full command tab completion support, and most commands have
-assigned aliases to their first letter for less typing.
 
 ## Build Instructions
 
