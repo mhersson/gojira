@@ -31,8 +31,6 @@ Gojira is the Japanese word for Godzilla.
 
 ## Build Instructions
 
-Gojira requires Go >= 1.16
-
 Clone the repo then run `make build` and/or `make install`
 
 ## Install Instructions
