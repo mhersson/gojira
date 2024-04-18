@@ -1,0 +1,14 @@
+builds:
+- env:
+  - CGO_ENABLED=0
+  - REPOSITORY=github.com/mhersson/gojira
+  goos:
+  - darwin
+  - linux
+  goarch:
+  - amd64
+  - arm64
+  ldflags:
+  - -s -w -X github.com/mhersson/gojira/cmd.GojiraGitRevision={{ .ShortCommit }}
+  - -X github.com/mhersson/gojira/cmd.GojiraVersion={{ .Tag }}
+  - -X github.com/mhersson/gojira/cmd.GojiraRepository={{ .Env.REPOSITORY }}
