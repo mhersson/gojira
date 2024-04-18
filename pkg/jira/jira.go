@@ -36,9 +36,9 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/mhersson/gojira/pkg/types"
-	"gitlab.com/mhersson/gojira/pkg/util"
-	"gitlab.com/mhersson/gojira/pkg/util/validate"
+	"github.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/util"
+	"github.com/mhersson/gojira/pkg/util/validate"
 )
 
 var jcfg types.JiraConfig

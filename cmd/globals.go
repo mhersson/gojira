@@ -24,7 +24,7 @@ package cmd
 import (
 	"path"
 
-	"gitlab.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/types"
 )
 
 // GojiraVersion GojiraGitRevision and GojiraRepository

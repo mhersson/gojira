@@ -41,8 +41,8 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/mhersson/gojira/pkg/types"
-	"gitlab.com/mhersson/gojira/pkg/util/convert"
+	"github.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/util/convert"
 )
 
 //go:embed tpl/*.tmpl

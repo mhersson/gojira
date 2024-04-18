@@ -26,9 +26,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mhersson/gojira/pkg/jira"
+	"github.com/mhersson/gojira/pkg/util"
 	"github.com/spf13/cobra"
-	"gitlab.com/mhersson/gojira/pkg/jira"
-	"gitlab.com/mhersson/gojira/pkg/util"
 )
 
 const setActiveUsage string = `

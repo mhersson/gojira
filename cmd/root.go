@@ -34,7 +34,7 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 
-	"gitlab.com/mhersson/gojira/pkg/jira"
+	"github.com/mhersson/gojira/pkg/jira"
 )
 
 var rootCmdLong = `The Gojira JIRA client

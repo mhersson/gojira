@@ -24,9 +24,9 @@ package convert_test
 import (
 	"testing"
 
+	"github.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/util/convert"
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/mhersson/gojira/pkg/types"
-	"gitlab.com/mhersson/gojira/pkg/util/convert"
 )
 
 func TestDurationStringToSeconds(t *testing.T) {

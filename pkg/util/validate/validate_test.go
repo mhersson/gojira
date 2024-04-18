@@ -24,7 +24,7 @@ package validate_test
 import (
 	"testing"
 
-	"gitlab.com/mhersson/gojira/pkg/util/validate"
+	"github.com/mhersson/gojira/pkg/util/validate"
 )
 
 func TestDate(t *testing.T) {

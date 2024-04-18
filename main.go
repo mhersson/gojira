@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "gitlab.com/mhersson/gojira/cmd"
+import "github.com/mhersson/gojira/cmd"
 
 func main() {
 	cmd.Execute()

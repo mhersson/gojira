@@ -28,12 +28,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mhersson/gojira/pkg/jira"
+	"github.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/util"
+	"github.com/mhersson/gojira/pkg/util/convert"
+	"github.com/mhersson/gojira/pkg/util/validate"
 	"github.com/spf13/cobra"
-	"gitlab.com/mhersson/gojira/pkg/jira"
-	"gitlab.com/mhersson/gojira/pkg/types"
-	"gitlab.com/mhersson/gojira/pkg/util"
-	"gitlab.com/mhersson/gojira/pkg/util/convert"
-	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const editDescriptionUsage string = `By default the active issue is edited,

@@ -1,4 +1,4 @@
-module gitlab.com/mhersson/gojira
+module github.com/mhersson/gojira
 
 go 1.16
 

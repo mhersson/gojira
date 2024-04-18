@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gitlab.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/types"
 )
 
 var Color = types.Color{

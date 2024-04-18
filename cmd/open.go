@@ -29,7 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"gitlab.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/types"
 )
 
 const openUsage string = `This command will open the issue in your default browser

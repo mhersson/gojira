@@ -26,7 +26,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"gitlab.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/types"
 )
 
 func DurationStringToSeconds(duration string) (string, error) {

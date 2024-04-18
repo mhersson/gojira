@@ -28,10 +28,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mhersson/gojira/pkg/jira"
+	"github.com/mhersson/gojira/pkg/util/format"
+	"github.com/mhersson/gojira/pkg/util/validate"
 	"github.com/spf13/cobra"
-	"gitlab.com/mhersson/gojira/pkg/jira"
-	"gitlab.com/mhersson/gojira/pkg/util/format"
-	"gitlab.com/mhersson/gojira/pkg/util/validate"
 )
 
 const addCommentUsage string = `This command will add a new comment to an issue.

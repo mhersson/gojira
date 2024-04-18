@@ -5,7 +5,7 @@
 SHELL=bash
 
 VERSION=0.11.4
-REPOSITORY="https://gitlab.com/mhersson/gojira.git"
+REPOSITORY="https://github.com/mhersson/gojira.git"
 
 # make will interpret non-option arguments in the command line as targets.
 # This turns them into do-nothing targets, so make won't complain:
@@ -19,9 +19,9 @@ endif
 
 GIT_COMMIT=$(shell git rev-parse --short HEAD)
 
-LDFLAGS="-X gitlab.com/mhersson/gojira/cmd.GojiraGitRevision=$(GIT_COMMIT) \
--X gitlab.com/mhersson/gojira/cmd.GojiraVersion=$(VERSION) \
--X gitlab.com/mhersson/gojira/cmd.GojiraRepository=$(REPOSITORY)"
+LDFLAGS="-X github.com/mhersson/gojira/cmd.GojiraGitRevision=$(GIT_COMMIT) \
+-X github.com/mhersson/gojira/cmd.GojiraVersion=$(VERSION) \
+-X github.com/mhersson/gojira/cmd.GojiraRepository=$(REPOSITORY)"
 
 all: build
 

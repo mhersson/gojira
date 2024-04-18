@@ -25,7 +25,7 @@ import (
 	"regexp"
 	"strings"
 
-	"gitlab.com/mhersson/gojira/pkg/types"
+	"github.com/mhersson/gojira/pkg/types"
 )
 
 func Date(date string) bool {

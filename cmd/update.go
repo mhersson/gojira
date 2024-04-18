@@ -26,8 +26,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mhersson/gojira/pkg/jira"
 	"github.com/spf13/cobra"
-	"gitlab.com/mhersson/gojira/pkg/jira"
 )
 
 const updateStatusUsage string = `By default the active issue gets updated,
