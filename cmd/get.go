@@ -356,7 +356,7 @@ var getSprintCMD = &cobra.Command{
 				printSprintIssues(&sprint, issues, *issueTypes, priorities)
 			}
 		} else {
-			fmt.Printf("%s does not exist or sprint support is not enabled\n", args[0])
+			fmt.Printf("%s does not exist or sprint support is not enabled\n", board)
 		}
 	},
 }
