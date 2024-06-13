@@ -108,21 +108,6 @@ func GetActiveIssue(path string) string {
 	return string(out)
 }
 
-func GetActiveBoards(path string) string {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		fmt.Println("No active board is set")
-		os.Exit(0)
-	}
-
-	out, err := os.ReadFile(path)
-	if err != nil {
-		fmt.Println("Failed to get active board")
-		os.Exit(1)
-	}
-
-	return string(out)
-}
-
 func GetActiveSprintOrKanban(path, boardType string) string {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Println("No active board is set")

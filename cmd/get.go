@@ -201,7 +201,7 @@ var getActiveSprintCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Args:    cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Active sprint: %s\n", util.GetActiveSprintOrKanban(BoardFile, "sprint"))
+		fmt.Printf("Active sprint board: %s\n", util.GetActiveSprintOrKanban(BoardFile, "sprint"))
 	},
 }
 
