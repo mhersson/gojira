@@ -46,10 +46,10 @@ func IssueKey(key *string) bool {
 	return re.MatchString(*key)
 }
 
-func ProjectKey(key string, projects types.IssueCreateMeta) types.Project {
+func ProjectKey(key string, projects []types.Project) types.Project {
 	// This validates the project key not the issue key
 	// hvis is the project key + a number
-	for _, v := range projects.Projects {
+	for _, v := range projects {
 		if key == strings.ToUpper(v.Key) {
 			return v
 		}

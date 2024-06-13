@@ -38,25 +38,33 @@ import (
 	"github.com/mhersson/gojira/pkg/util/validate"
 )
 
-// createCmd represents the create command.
-var createCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create new issue",
-	Long: `Create new issue
+const createUsage = `Create new issue
 This guides the user through as series of questions which
 can be aborted at anytime.
 
 The description input supports multiple  lines of text,
-and must be terminated by Ctrl+D. Writing JIRA notation, with
-{noformat} and {code}, is supported, but for easier writing
+and will open in $EDITOR, or vim by default. Writing JIRA notation,
+with {noformat} and {code}, is supported, but for easier writing
 three backticks will be converted to {noformat}.
 
 After all data is collected they must be verified and confirmed
-by the user, and only then will the request be sent to JIRA.`,
-	Args: cobra.ExactArgs(1),
+by the user, and only then will the request be sent to JIRA.
+
+Usage:
+  gojira create [PROJECT_KEY] [flags]
+
+Flags:
+  -h, --help   help for create
+`
+
+// createCmd represents the create command.
+var createCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create new issue",
+	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.ArbitraryArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		key := strings.ToUpper(args[0])
-		validProjects := jira.GetValidProjectsAndIssueType()
+		validProjects := jira.GetValidProjects()
 		project := validate.ProjectKey(key, validProjects)
 		if project.ID == "" {
 			fmt.Printf("%s is not a valid project key\n", key)
@@ -91,6 +99,8 @@ by the user, and only then will the request be sent to JIRA.`,
 
 func init() {
 	rootCmd.AddCommand(createCmd)
+
+	createCmd.SetUsageTemplate(createUsage)
 }
 
 func getUserInputPriority() (string, string) {
@@ -117,23 +127,25 @@ func getUserInputPriority() (string, string) {
 }
 
 func getUserInputIssueType(project types.Project) (string, string) {
+	issueTypes := jira.GetProjectIssueTypes(project.Key)
+
 	fmt.Println("Choose issue type:")
 
-	for i, v := range project.IssueTypes {
+	for i, v := range issueTypes {
 		fmt.Printf("%d. %s\n", i, v.Name)
 	}
 
 	// This is bad code - only supports range from 0-19
-	r := fmt.Sprintf("^([0-%d])$", len(project.IssueTypes)-1)
-	if len(project.IssueTypes) > 10 {
-		r = fmt.Sprintf("^([0-9][0-%d]?)$", len(project.IssueTypes)-11)
+	r := fmt.Sprintf("^([0-%d])$", len(issueTypes)-1)
+	if len(issueTypes) > 10 {
+		r = fmt.Sprintf("^([0-9][0-%d]?)$", len(issueTypes)-11)
 	}
 
 	index := util.GetUserInput("", r)
 
 	x, _ := strconv.Atoi(index)
 
-	for i, v := range project.IssueTypes {
+	for i, v := range issueTypes {
 		if i == x {
 			return v.ID, v.Name
 		}

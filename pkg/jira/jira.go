@@ -117,14 +117,26 @@ func GetTimesheetForUser(date, username string) []types.Timesheet {
 	return jsonResponse.Worklog
 }
 
-func GetValidProjectsAndIssueType() types.IssueCreateMeta {
-	url := jcfg.Server + "/rest/api/2/issue/createmeta"
+func GetValidProjects() []types.Project {
+	url := jcfg.Server + "/rest/api/2/project"
 
-	jsonResponse := &types.IssueCreateMeta{}
+	jsonResponse := new([]types.Project)
 
 	query(http.MethodGet, url, nil, jsonResponse)
 
 	return *jsonResponse
+}
+
+func GetProjectIssueTypes(projectKey string) []types.IssueType {
+	url := jcfg.Server + "/rest/api/2/issue/createmeta/" + projectKey + "/issuetypes"
+
+	jsonResponse := new(struct {
+		Values []types.IssueType `json:"values"`
+	})
+
+	query(http.MethodGet, url, nil, jsonResponse)
+
+	return jsonResponse.Values
 }
 
 func GetPriorities() []types.Priority {

@@ -260,21 +260,16 @@ type Transition struct {
 		Name           string `json:"name"`
 		ID             string `json:"id"`
 		StatusCategory struct {
-			ID   int    `json:"id"`
 			Name string `json:"name"`
+			ID   int    `json:"id"`
 		} `json:"statusCategory"`
 	} `json:"to"`
 }
 
-type IssueCreateMeta struct {
-	Projects []Project `json:"projects"`
-}
-
 type Project struct {
-	ID         string      `json:"id"`
-	Key        string      `json:"key"`
-	Name       string      `json:"name"`
-	IssueTypes []IssueType `json:"issuetypes"`
+	ID   string `json:"id"`
+	Key  string `json:"key"`
+	Name string `json:"name"`
 }
 
 type IssueType struct {
