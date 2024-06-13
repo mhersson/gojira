@@ -219,7 +219,7 @@ var getStatusCmd = &cobra.Command{
 	Use:     "status",
 	Short:   "Display the current status",
 	Args:    cobra.NoArgs,
-	Aliases: []string{"s"},
+	Aliases: []string{"st"},
 	Run: func(cmd *cobra.Command, args []string) {
 		jira.CheckIssueKey(&IssueKey, IssueFile)
 		status := getStatus(IssueKey)
