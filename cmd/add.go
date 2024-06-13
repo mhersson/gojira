@@ -35,7 +35,7 @@ import (
 )
 
 const addCommentUsage string = `This command will add a new comment to an issue.
-The input supports multiline text, and must be terminated with Ctrl+D.
+The input supports multiline text, and will open in $EDITOR, defaults to vim.
 Writing JIRA notation, with {noformat} and {code}, is supported, but for
 easier writing three backticks will be converted to {noformat}.
 
