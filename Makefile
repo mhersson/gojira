@@ -4,7 +4,8 @@
 
 SHELL=bash
 
-VERSION=0.12.2
+VERSION=0.12.3
+
 REPOSITORY="https://github.com/mhersson/gojira.git"
 
 # make will interpret non-option arguments in the command line as targets.
@@ -16,6 +17,21 @@ ifeq (run,$(firstword $(MAKECMDGOALS)))
 # ...and turn them into do-nothing targets
 	$(eval $(RUN_ARGS):;@:)
 endif
+
+# Get the tag on the latest commit, if it exists, and strip the leading 'v'
+LATEST_TAG = $(shell git describe --exact-match --tags $(git log -n1 --pretty='%h') 2>/dev/null | sed 's/^v//')
+
+# Check if LATEST_TAG is set, if so, override the VERSION variable
+# This ensures that the VERSION variable is set to the latest tag
+# if I forget to update the VERSION variable manually
+ifneq ($(LATEST_TAG),)
+	VERSION := $(LATEST_TAG)
+endif
+
+# Example target that prints the version
+.PHONY: show-version
+show-version:
+	@echo $(VERSION)
 
 GIT_COMMIT=$(shell git rev-parse --short HEAD)
 
