@@ -359,9 +359,10 @@ var getMyWorklogStatistics = &cobra.Command{
 }
 
 var getSprintCmd = &cobra.Command{
-	Use:   "sprint",
-	Short: "Display sprint board",
-	Args:  cobra.MaximumNArgs(1),
+	Use:     "sprint",
+	Short:   "Display sprint board",
+	Aliases: []string{"s"},
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var board string
 		if len(args) >= 1 {
@@ -392,9 +393,10 @@ var getSprintCmd = &cobra.Command{
 }
 
 var getKanbanBoardCmd = &cobra.Command{
-	Use:   "kanban",
-	Short: "Display kanban board",
-	Args:  cobra.MaximumNArgs(1),
+	Use:     "kanban",
+	Short:   "Display kanban board",
+	Aliases: []string{"k"},
+	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var board string
 		if len(args) >= 1 {
