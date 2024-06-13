@@ -26,6 +26,8 @@ import (
 	"strings"
 
 	"github.com/mhersson/gojira/pkg/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var Color = types.Color{
@@ -140,6 +142,10 @@ func FixVersions(issue types.IssueDescription) string {
 	}
 
 	return strings.Replace(fixVersions, ", ", "", 1)
+}
+
+func KanbanBoardHeader(board string) string {
+	return fmt.Sprintf("%s%s%70s", Color.Bold, Color.Yellow, cases.Title(language.AmericanEnglish).String(board))
 }
 
 func SprintHeader(sprint types.Sprint) string {

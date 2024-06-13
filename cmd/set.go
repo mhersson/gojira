@@ -24,6 +24,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/mhersson/gojira/pkg/jira"
@@ -38,13 +39,19 @@ working on. Setting an issue as active removes the need of specifying an
 issueKey with (almost) every command
 
 The same goes for setting a board as active. It marks the given board as your
-board of interest, and will be used by the get sprint command when no other board
-name is specified
+board of interest, and will be used by the get sprint or kanban commands when
+no other board name is specified
+
 Usage:
-  gojira set active [issue|board] [ISSUE KEY|BOARD NAME] [flags]
+  gojira set active [issue|sprint|kanban] [ISSUE KEY|BOARD NAME] [flags]
 
 Aliases:
   active, a
+
+Available Commands:
+  issue       Set the active issue
+  kanban      Set the active kanban board
+  sprint      Set the active sprint
 
 Flags:
   -h, --help                   help for comment
@@ -57,23 +64,44 @@ var setCmd = &cobra.Command{
 
 var setActiveCmd = &cobra.Command{
 	Use:     "active",
-	Short:   "Set issue or board active",
+	Short:   "Set issue, sprint or kanban board active",
 	Aliases: []string{"a"},
-	Args:    cobra.ExactArgs(2),
+}
+
+var setActiveIssueCmd = &cobra.Command{
+	Use:     "issue",
+	Short:   "Set the active issue",
+	Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Aliases: []string{"i"},
 	Run: func(cmd *cobra.Command, args []string) {
-		switch args[0] {
-		case "issue":
-			IssueKey = strings.ToUpper(args[1])
-			setActiveIssue(IssueKey)
-			key := util.GetActiveIssue(IssueFile)
-			fmt.Printf("Issue %s is active\n", key)
-		case "board":
-			board := strings.ToLower(args[1])
-			setActiveBoard(board)
-			fmt.Printf("Board '%s' is active\n", board)
-		default:
-			fmt.Println("First argument must be issue or board")
-		}
+		IssueKey = strings.ToUpper(args[0])
+		setActiveIssue(IssueKey)
+		key := util.GetActiveIssue(IssueFile)
+		fmt.Printf("Issue %s is active\n", key)
+	},
+}
+
+var setActiveSprintCmd = &cobra.Command{
+	Use:     "sprint",
+	Short:   "Set the active sprint",
+	Aliases: []string{"s"},
+	Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Run: func(cmd *cobra.Command, args []string) {
+		board := strings.ToLower(args[0])
+		setActiveBoard(board, "sprint")
+		fmt.Printf("Sprint '%s' is active\n", board)
+	},
+}
+
+var setActiveKanbanCmd = &cobra.Command{
+	Use:     "kanban",
+	Short:   "Set the active kanban board",
+	Aliases: []string{"k"},
+	Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Run: func(cmd *cobra.Command, args []string) {
+		board := strings.ToLower(args[0])
+		setActiveBoard(board, "kanban")
+		fmt.Printf("Kanban board '%s' is active\n", board)
 	},
 }
 
@@ -83,6 +111,9 @@ func init() {
 	setCmd.AddCommand(setActiveCmd)
 
 	setActiveCmd.SetUsageTemplate(setActiveUsage)
+	setActiveCmd.AddCommand(setActiveIssueCmd)
+	setActiveCmd.AddCommand(setActiveSprintCmd)
+	setActiveCmd.AddCommand(setActiveKanbanCmd)
 }
 
 func setActiveIssue(key string) {
@@ -108,15 +139,35 @@ func setActiveIssue(key string) {
 	}
 }
 
-func setActiveBoard(board string) {
+func setActiveBoard(board, boardType string) {
 	if id := jira.GetRapidViewID(board); id == nil {
 		fmt.Printf("Board %s does not exist, and can not be set active\n", board)
 		os.Exit(1)
 	}
 
-	createConfigFolder()
+	var content []byte
 
-	err := os.WriteFile(BoardFile, []byte(board), 0o600)
+	if _, err := os.Stat(BoardFile); err == nil {
+		content, err = os.ReadFile(BoardFile)
+		if err != nil {
+			fmt.Println("Failed to read existing board config")
+			os.Exit(1)
+		}
+
+		p := regexp.MustCompile(boardType + `=(.*)`)
+		repl := p.ReplaceAllString(string(content), boardType+"="+board)
+		if repl == string(content) {
+			content = append(content, []byte(boardType+"="+board)...)
+		} else {
+			content = []byte(repl)
+		}
+
+	} else {
+		createConfigFolder()
+		content = []byte(boardType + "=" + board + "\n")
+	}
+
+	err := os.WriteFile(BoardFile, content, 0o600)
 	if err != nil {
 		fmt.Printf("Failed to set %s active\n", board)
 		os.Exit(1)

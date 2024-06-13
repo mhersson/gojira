@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// TODO: Split into subcommands for issue, sprint and kanban
 var unsetCmd = &cobra.Command{
 	Use:   "unset",
 	Short: "Unset (clear) active issue and board",

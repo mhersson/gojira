@@ -238,6 +238,18 @@ func GetSprints(rapidViewID int) ([]types.Sprint, []types.SprintIssue) {
 	return resp.Sprints, resp.Issues
 }
 
+func GetKanbanIssues(boardID int) []types.Issue {
+	url := fmt.Sprintf("%s/rest/agile/1.0/board/%d/issue", jcfg.Server, boardID)
+
+	resp := new(struct {
+		Issues []types.Issue `json:"issues"`
+	})
+
+	query(http.MethodGet, url, nil, resp)
+
+	return resp.Issues
+}
+
 func CheckIssueKey(key *string, issueFile string) {
 	if *key != "" {
 		if !validate.IssueKey(key) {
@@ -513,7 +525,9 @@ func update(method, url string, payload []byte) ([]byte, error) {
 
 	body, _ := io.ReadAll(resp.Body)
 
-	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated &&
+		resp.StatusCode != http.StatusNoContent {
 		return body, &types.Error{Message: checkResponseCode(resp)}
 	}
 
@@ -542,7 +556,9 @@ func query(method string, url string, payload []byte, jsonResponse interface{}) 
 		log.Fatal(err)
 	}
 
-	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated &&
+		resp.StatusCode != http.StatusNoContent {
 		log.Fatalf("Error:%s", checkResponseCode(resp))
 	}
 	// fmt.Println(string(body))
@@ -570,13 +586,15 @@ func exists(url string) bool {
 		return false
 	}
 
-	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated &&
+		resp.StatusCode != http.StatusNoContent {
 		log.Fatalf("Error:%s", checkResponseCode(resp))
 	}
 
 	defer resp.Body.Close()
 
-	return resp.StatusCode == 200
+	return resp.StatusCode == http.StatusOK
 }
 
 func checkResponseCode(resp *http.Response) string {

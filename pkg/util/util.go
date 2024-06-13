@@ -108,9 +108,9 @@ func GetActiveIssue(path string) string {
 	return string(out)
 }
 
-func GetActiveBoard(path string) string {
+func GetActiveBoards(path string) string {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		fmt.Println("Active board is not set")
+		fmt.Println("No active board is set")
 		os.Exit(0)
 	}
 
@@ -120,7 +120,29 @@ func GetActiveBoard(path string) string {
 		os.Exit(1)
 	}
 
-	return strings.TrimSpace(string(out))
+	return string(out)
+}
+
+func GetActiveSprintOrKanban(path, boardType string) string {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Println("No active board is set")
+		os.Exit(0)
+	}
+
+	out, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Println("Failed to get active board")
+		os.Exit(1)
+	}
+
+	re := regexp.MustCompile(boardType + `=(.*)`)
+	match := re.FindSubmatch(out)
+	if match == nil {
+		fmt.Printf("No active %s is set\n", boardType)
+		os.Exit(0)
+	}
+
+	return string(match[1])
 }
 
 func GetWorklogsSorted(worklogs []types.Timesheet, truncate bool) []types.SimplifiedTimesheet {

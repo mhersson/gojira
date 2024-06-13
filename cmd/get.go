@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -142,6 +143,18 @@ Flags:
   -a, --all                    get all sprints (future and  active)
 `
 
+const getKanbanBoardUsage string = `
+Usage:
+  gojira get kanban [NAME OF BOARD]
+
+Aliases:
+  kanban
+
+Flags:
+  -h, --help                   help for kanban
+  -c, --closed                 show closed issues
+`
+
 // getCmd represents the get command.
 var getCmd = &cobra.Command{
 	Use:     "get",
@@ -159,29 +172,46 @@ var getAllIssuesCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Run: func(cmd *cobra.Command, args []string) {
 		myIssues := jira.GetIssues(JQLFilter)
-		printIssues(myIssues, true)
+		printIssues(myIssues, true, false)
 	},
 }
 
 var getActiveCmd = &cobra.Command{
 	Use:     "active",
+	Short:   "Display the active issue, sprint or kanban board",
+	Args:    cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Aliases: []string{"a"},
+}
+
+var getActiveIssueCmd = &cobra.Command{
+	Use:     "issue",
 	Short:   "Display the active issue",
 	Args:    cobra.NoArgs,
-	Aliases: []string{"a"},
+	Aliases: []string{"i"},
 	Run: func(cmd *cobra.Command, args []string) {
 		key := util.GetActiveIssue(IssueFile)
 		summary := getSummary(key)
-		fmt.Printf("Active Issue: %s %s\n", key, summary)
+		fmt.Printf("Active issue: %s %s\n", key, summary)
 	},
 }
 
-var getActiveBoardCmd = &cobra.Command{
-	Use:     "board",
-	Short:   "Display the active board",
+var getActiveSprintCmd = &cobra.Command{
+	Use:     "sprint",
+	Short:   "Display the active sprint",
+	Aliases: []string{"s"},
 	Args:    cobra.NoArgs,
-	Aliases: []string{"b"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("Active Board: %s\n", util.GetActiveBoard(BoardFile))
+		fmt.Printf("Active sprint: %s\n", util.GetActiveSprintOrKanban(BoardFile, "sprint"))
+	},
+}
+
+var getActiveKanbanCmd = &cobra.Command{
+	Use:     "kanban",
+	Short:   "Display the active kanban board",
+	Aliases: []string{"k"},
+	Args:    cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Active kanban board: %s\n", util.GetActiveSprintOrKanban(BoardFile, "kanban"))
 	},
 }
 
@@ -328,16 +358,16 @@ var getMyWorklogStatistics = &cobra.Command{
 	},
 }
 
-var getSprintCMD = &cobra.Command{
+var getSprintCmd = &cobra.Command{
 	Use:   "sprint",
-	Short: "Display sprints from the active board",
+	Short: "Display sprint board",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var board string
 		if len(args) >= 1 {
 			board = args[0]
 		} else {
-			board = util.GetActiveBoard(BoardFile)
+			board = util.GetActiveSprintOrKanban(BoardFile, "sprint")
 		}
 		rapidView := jira.GetRapidViewID(board)
 		if rapidView != nil && rapidView.SprintSupportEnabled {
@@ -361,17 +391,46 @@ var getSprintCMD = &cobra.Command{
 	},
 }
 
+var getKanbanBoardCmd = &cobra.Command{
+	Use:   "kanban",
+	Short: "Display kanban board",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var board string
+		if len(args) >= 1 {
+			board = args[0]
+		} else {
+			board = util.GetActiveSprintOrKanban(BoardFile, "kanban")
+		}
+
+		rapidView := jira.GetRapidViewID(board)
+		if rapidView == nil {
+			fmt.Printf("Board %s does not exist\n", board)
+			os.Exit(1)
+		}
+
+		issues := jira.GetKanbanIssues(rapidView.ID)
+
+		fmt.Println(format.KanbanBoardHeader(board))
+		if cmd.Flag("closed").Changed {
+			printIssues(issues, true, true)
+		} else {
+			printIssues(issues, true, false)
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(getCmd)
 	getCmd.AddCommand(getAllIssuesCmd)
 	getCmd.AddCommand(getActiveCmd)
-	getCmd.AddCommand(getActiveBoardCmd)
 	getCmd.AddCommand(getStatusCmd)
 	getCmd.AddCommand(getTransistionsCmd)
 	getCmd.AddCommand(getCommentsCmd)
 	getCmd.AddCommand(getWorklogCmd)
 	getCmd.AddCommand(getMyWorklogCmd)
-	getCmd.AddCommand(getSprintCMD)
+	getCmd.AddCommand(getSprintCmd)
+	getCmd.AddCommand(getKanbanBoardCmd)
 
 	getAllIssuesCmd.Flags().StringVarP(&JQLFilter,
 		"filter", "f", "", "write your own jql filter")
@@ -380,14 +439,21 @@ func init() {
 	getCommentsCmd.SetUsageTemplate(getCommentsUsage)
 	getWorklogCmd.SetUsageTemplate(getWorklogUsage)
 
+	getActiveCmd.AddCommand(getActiveIssueCmd)
+	getActiveCmd.AddCommand(getActiveSprintCmd)
+	getActiveCmd.AddCommand(getActiveKanbanCmd)
+
 	getMyWorklogCmd.SetUsageTemplate(myWorklogUsage)
 	getMyWorklogCmd.Flags().BoolVarP(&ShowEntireWeek, "week", "w", false, "view current week (only with timesheet plugin)")
 	getMyWorklogCmd.AddCommand(getMyWorklogStatistics)
 
 	getMyWorklogStatistics.SetUsageTemplate(myWorklogStatisticsUsage)
 
-	getSprintCMD.SetUsageTemplate(getSprintUsage)
-	getSprintCMD.Flags().BoolVarP(&GetAllSprints, "all", "a", false, "get all sprints")
+	getSprintCmd.SetUsageTemplate(getSprintUsage)
+	getSprintCmd.Flags().BoolVarP(&GetAllSprints, "all", "a", false, "get all sprints")
+
+	getKanbanBoardCmd.SetUsageTemplate(getKanbanBoardUsage)
+	getKanbanBoardCmd.Flags().BoolP("closed", "c", false, "Show closed issues")
 }
 
 func getStatus(key string) string {
@@ -466,15 +532,19 @@ func getPriorityNameByID(priorities []types.Priority, id string) string {
 	return "Unknown"
 }
 
-func printIssues(jsonResponse []types.Issue, header bool) {
+func printIssues(issues []types.Issue, header bool, printClosed bool) {
 	if header {
 		fmt.Printf("%s%s\n%-15s%-12s%-10s%-64s%-20s%-15s%s\n", format.Color.Ul, format.Color.Yellow,
 			"Key", "Type", "Priority", "Summary", "Status", "Assignee", format.Color.Nocolor)
 	}
 
-	for _, v := range jsonResponse {
+	for _, v := range issues {
 		if len(v.Fields.Summary) >= 60 {
 			v.Fields.Summary = v.Fields.Summary[:60] + ".."
+		}
+
+		if !printClosed && slices.Contains([]string{"Closed", "Resolved", "Verified"}, v.Fields.Status.Name) {
+			continue
 		}
 
 		fmt.Printf("%-15s%s%s%-64s%s%s\n",

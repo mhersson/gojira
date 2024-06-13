@@ -73,9 +73,8 @@ var describeCmd = &cobra.Command{
 
 		if len(issues) > 0 {
 			fmt.Printf("\n%sIssues in Epic:%s\n", format.Color.Ul, format.Color.Nocolor)
-			printIssues(issues, false)
+			printIssues(issues, false, true)
 		}
-
 	},
 }
 
